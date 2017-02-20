@@ -10,14 +10,14 @@ def calculate_distance(pos1, pos2):
     return ((pos1[0]-pos2[0]) ** 2 + (pos1[1]-pos2[1]) ** 2) ** 0.5
 
 # Extract distance (D) and movement time (MT) between 2 hit objects
-def extract_D_MT(prev_obj, curr_obj):
+def extract_D_MT(prev_obj, curr_obj, diameter):
     
     if prev_obj['objectName'] == 'spinner' or curr_obj['objectName'] == 'spinner':
         D = 0.0
         MT = 1.0 # arbitrary
     
     elif prev_obj['objectName'] == 'slider':
-        D = calculate_distance(prev_obj['endPosition'], curr_obj['position'])
+        D = max(calculate_distance(prev_obj['endPosition'], curr_obj['position']) - 1.5 * diameter, 0.0)
         MT = (curr_obj['startTime'] - prev_obj['endTime'] + 30) / 1000.0
     
     elif prev_obj['objectName'] == 'circle':
@@ -31,23 +31,30 @@ def extract_D_MT(prev_obj, curr_obj):
     return (D, MT)
 
 
-if __name__ == "__main__":
-    
-    name = sys.argv[1]
+def calculate_map_diff(file_path):
 
-    with open('data/maps/' + name + '.json') as bm_file:    
+    with open(file_path) as bm_file:
         
         bm = json.load(bm_file)
 
         hit_objects = bm['hitObjects']
         cs = float(bm['CircleSize'])
-        W = cs_to_diameter(cs)
+        diameter = cs_to_diameter(cs)
 
         Ds_MTs = []
 
         for prev_obj, curr_obj in zip(hit_objects, hit_objects[1:]):
-            Ds_MTs.append(extract_D_MT(prev_obj, curr_obj))
+            Ds_MTs.append(extract_D_MT(prev_obj, curr_obj, diameter))
 
-        TP = calculate_throughput(Ds_MTs, W)
+        TP = calculate_throughput(Ds_MTs, diameter)
 
-        print TP
+        return TP
+
+
+if __name__ == "__main__":
+    
+    name = sys.argv[1]
+
+    diff = calculate_map_diff('data/maps/' + name + '.json')
+
+    print diff
