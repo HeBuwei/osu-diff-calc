@@ -7,13 +7,18 @@ LOG_TP_PRECISION = 1e-7
 # with diameter W at distance D within movement time MT
 def calculate_hit_prob(D, W, MT, TP):
     
+    a = 0.0
+
     if D == 0:
         return 1.0
 
     if MT*TP > 100:
         return 1.0
 
-    return math.erf(2.066 * (W/D) * (2**(MT*TP)-1) / 2**0.5)
+    if MT-a <= 0:
+        return 0.0
+
+    return math.erf(2.066 * (W/D) * (2**((MT-a)*TP)-1) / 2**0.5)
 
 
 def calculate_fc_prob(Ds_MTs, W, TP):
@@ -23,7 +28,7 @@ def calculate_fc_prob(Ds_MTs, W, TP):
         hit_prob = calculate_hit_prob(D, W, MT, TP)
         fc_prob *= hit_prob
 
-    print('' + str(TP) + ' | ' + str(fc_prob))
+    # print('' + str(TP) + ' | ' + str(fc_prob))
     return fc_prob
 
 def calculate_throughput(Ds_MTs, W):
