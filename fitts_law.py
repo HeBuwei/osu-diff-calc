@@ -3,6 +3,7 @@ import math
 P_THRESHOLD = 0.1
 LOG_TP_PRECISION = 1e-7
 
+
 # calculates the probability a player with throughput TP can hit an object
 # with diameter W at distance D within movement time MT
 def calculate_hit_prob(D, W, MT, TP):
@@ -30,6 +31,7 @@ def calculate_fc_prob(Ds_MTs, W, TP):
 
     # print('' + str(TP) + ' | ' + str(fc_prob))
     return fc_prob
+
 
 def calculate_throughput(Ds_MTs, W):
     log_TP_min = -3.0
@@ -60,3 +62,7 @@ def calculate_throughput(Ds_MTs, W):
             log_TP_min = log_TP_mid
 
     return math.exp((log_TP_min + log_TP_max) / 2)
+
+
+def calculate_IP(D, W, MT):
+    return math.log2(D/W + 1) / MT
