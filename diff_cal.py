@@ -31,7 +31,7 @@ def extract_D_MT(prev_obj, curr_obj, diameter):
         finishPosition = get_finish_position(prev_obj)
 
         # long sliders (when the slider tail matters)
-        D_long = max(calculate_distance(prev_obj['endPosition'], curr_obj['position']) - 1.5 * diameter, 0.0)
+        D_long = max(calculate_distance(finishPosition, curr_obj['position']) - 1.5 * diameter, 0.0)
         MT_long = (curr_obj['startTime'] - prev_obj['endTime'] + 70) / 1000.0
 
         # short sliders (when the slider head matters) (treat as a circle)
