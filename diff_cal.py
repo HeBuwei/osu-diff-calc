@@ -12,6 +12,13 @@ def calculate_distance(pos1, pos2):
     return ((pos1[0]-pos2[0]) ** 2 + (pos1[1]-pos2[1]) ** 2) ** 0.5
 
 
+def get_finish_position(slider):
+    if slider['repeatCount'] % 2 == 0:
+        return slider['position']
+    else:
+        return slider['endPosition']
+
+
 # Extract distance (D) and movement time (MT) between 2 hit objects
 def extract_D_MT(prev_obj, curr_obj, diameter):
     
@@ -20,8 +27,24 @@ def extract_D_MT(prev_obj, curr_obj, diameter):
         MT = 1.0 # arbitrary
     
     elif prev_obj['objectName'] == 'slider':
-        D = max(calculate_distance(prev_obj['endPosition'], curr_obj['position']) - 1.5 * diameter, 0.0)
-        MT = (curr_obj['startTime'] - prev_obj['endTime'] + 70) / 1000.0 # TODO: very short slider
+
+        finishPosition = get_finish_position(prev_obj)
+
+        # long sliders (when the slider tail matters)
+        D_long = max(calculate_distance(prev_obj['endPosition'], curr_obj['position']) - 1.5 * diameter, 0.0)
+        MT_long = (curr_obj['startTime'] - prev_obj['endTime'] + 70) / 1000.0
+
+        # short sliders (when the slider head matters) (treat as a circle)
+        D_short = calculate_distance(prev_obj['position'], curr_obj['position'])
+        MT_short = (curr_obj['startTime'] - prev_obj['startTime']) / 1000.0
+
+        if calculate_IP(D_long, diameter, MT_long) > calculate_IP(D_short, diameter, MT_short):
+            D = D_long
+            MT = MT_long
+        else:
+            D = D_short
+            MT = MT_short
+
     
     elif prev_obj['objectName'] == 'circle':
         D = calculate_distance(prev_obj['position'], curr_obj['position'])
