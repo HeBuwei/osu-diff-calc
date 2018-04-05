@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-from diff_cal import calculate_map_diff
+from diff_cal import calc_file_diff
 
 
 if __name__ == "__main__":
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     results = []
 
     for filename in map_pack_to_compare:
-        diff = calculate_map_diff("data/maps/" + filename)
+        diff = calc_file_diff("data/maps/" + filename)
         msg = '{:6.3f} - '.format(diff) + filename
         results.append((diff, msg))
 

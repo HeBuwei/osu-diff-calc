@@ -45,7 +45,6 @@ def extract_D_MT(prev_obj, curr_obj, diameter):
             D = D_short
             MT = MT_short
 
-    
     elif prev_obj['objectName'] == 'circle':
         D = calculate_distance(prev_obj['position'], curr_obj['position'])
         MT = (curr_obj['startTime'] - prev_obj['startTime']) / 1000.0
@@ -57,13 +56,40 @@ def extract_D_MT(prev_obj, curr_obj, diameter):
     return (D, MT)
 
 
-def calculate_map_diff(file_path):
-        
-    bm = load_beatmap(file_path)
+def speed_up(hit_objects, factor):
 
-    hit_objects = bm['hitObjects']
-    cs = float(bm['CircleSize'])
-    diameter = cs_to_diameter(cs)
+    for hit_object in hit_objects:
+
+        hit_object["startTime"] = hit_object["startTime"] / factor
+
+        if "endTime" in hit_object:
+            hit_object["endTime"] = hit_object["endTime"] / factor
+
+
+def apply_mods(beatmap, mods):
+
+    hit_objects = beatmap['hitObjects']
+    cs = float(beatmap['CircleSize'])
+
+    if mods[0] == "hr":
+        cs = 1.3 * cs
+    elif mods[0] == "ez":
+        cs = 0.5 * cs
+
+    beatmap["CsAfterMods"] = cs
+
+    if mods[1] == "dt":
+        speed_up(hit_objects, 1.5)
+    elif mods[1] == "ht":
+        speed_up(hit_objects, 0.75)
+
+
+def calc_diff(beatmap, mods=["nm", "nm"]):
+
+    apply_mods(beatmap, mods)
+
+    hit_objects = beatmap['hitObjects']
+    diameter = cs_to_diameter(beatmap["CsAfterMods"])
 
     Ds_MTs = []
 
@@ -71,10 +97,14 @@ def calculate_map_diff(file_path):
         Ds_MTs.append(extract_D_MT(prev_obj, curr_obj, diameter))
 
     TP = calculate_throughput(Ds_MTs, diameter)
-
+    
     diff = TP / 2.5
-
     return diff
+
+
+def calc_file_diff(file_path, mods=["nm", "nm"]):
+    bm = load_beatmap(file_path)
+    return calc_diff(bm, mods)
 
 
 def calculate_IP_vs_time(file_path):
@@ -97,7 +127,6 @@ def calculate_IP_vs_time(file_path):
     return (IPs, times)
 
 
-
 def load_beatmap(file_path):
     with open(file_path, encoding="utf8") as bm_file:
         bm = json.load(bm_file)
@@ -107,7 +136,8 @@ def load_beatmap(file_path):
 if __name__ == "__main__":
     
     name = sys.argv[1]
+    mods = [sys.argv[2], sys.argv[3]]
 
-    diff = calculate_map_diff('data/maps/' + name + '.json')
+    diff = calc_file_diff('data/maps/' + name + '.json', mods)
 
     print(diff)
