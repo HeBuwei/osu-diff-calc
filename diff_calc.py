@@ -1,6 +1,6 @@
 import json
 import sys
-from fitts_law import calculate_throughput, calculate_IP
+from fitts_law import calc_throughput, calc_IP
 
 
 def cs_to_diameter(cs):
@@ -8,7 +8,7 @@ def cs_to_diameter(cs):
     return 108.834 - 8.9628 * cs
 
 
-def calculate_distance(pos1, pos2):
+def calc_distance(pos1, pos2):
     return ((pos1[0]-pos2[0]) ** 2 + (pos1[1]-pos2[1]) ** 2) ** 0.5
 
 
@@ -22,23 +22,19 @@ def get_finish_position(slider):
 # Extract distance (D) and movement time (MT) between 2 hit objects
 def extract_D_MT(prev_obj, curr_obj, diameter):
     
-    if prev_obj['objectName'] == 'spinner' or curr_obj['objectName'] == 'spinner':
-        D = 0.0
-        MT = 1.0 # arbitrary
-    
-    elif prev_obj['objectName'] == 'slider':
+    if prev_obj['objectName'] == 'slider':
 
         finishPosition = get_finish_position(prev_obj)
 
         # long sliders (when the slider tail matters)
-        D_long = max(calculate_distance(finishPosition, curr_obj['position']) - 1.5 * diameter, 0.0)
+        D_long = max(calc_distance(finishPosition, curr_obj['position']) - 1.5 * diameter, 0.0)
         MT_long = (curr_obj['startTime'] - prev_obj['endTime'] + 70) / 1000.0
 
         # short sliders (when the slider head matters) (treat as a circle)
-        D_short = calculate_distance(prev_obj['position'], curr_obj['position'])
+        D_short = calc_distance(prev_obj['position'], curr_obj['position'])
         MT_short = (curr_obj['startTime'] - prev_obj['startTime']) / 1000.0
 
-        if calculate_IP(D_long, diameter, MT_long) > calculate_IP(D_short, diameter, MT_short):
+        if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
             D = D_long
             MT = MT_long
         else:
@@ -46,7 +42,7 @@ def extract_D_MT(prev_obj, curr_obj, diameter):
             MT = MT_short
 
     elif prev_obj['objectName'] == 'circle':
-        D = calculate_distance(prev_obj['position'], curr_obj['position'])
+        D = calc_distance(prev_obj['position'], curr_obj['position'])
         MT = (curr_obj['startTime'] - prev_obj['startTime']) / 1000.0
     
     else: # huh?
@@ -84,8 +80,13 @@ def apply_mods(beatmap, mods):
         speed_up(hit_objects, 0.75)
 
 
-def calc_diff(beatmap, mods=["nm", "nm"]):
+def remove_spinners(beatmap):
+    beatmap['hitObjects'] = [obj for obj in beatmap['hitObjects'] if obj['objectName'] != 'spinner']
 
+
+def calc_diff(beatmap, mods=["nm", "nm"]):
+    
+    remove_spinners(beatmap)
     apply_mods(beatmap, mods)
 
     hit_objects = beatmap['hitObjects']
@@ -96,10 +97,26 @@ def calc_diff(beatmap, mods=["nm", "nm"]):
     for prev_obj, curr_obj in zip(hit_objects, hit_objects[1:]):
         Ds_MTs.append(extract_D_MT(prev_obj, curr_obj, diameter))
 
-    TP = calculate_throughput(Ds_MTs, diameter)
+    TP = calc_throughput(Ds_MTs, diameter)
     
     diff = TP / 2.5
     return diff
+
+
+def calc_aim_diff_naive(beatmap):
+
+    hit_objects = beatmap['hitObjects']
+    diameter = cs_to_diameter(beatmap["CsAfterMods"])
+
+    Ds_MTs = []
+
+    for prev_obj, curr_obj in zip(hit_objects, hit_objects[1:]):
+        Ds_MTs.append(extract_D_MT(prev_obj, curr_obj, diameter))
+
+    TP = calc_throughput(Ds_MTs, diameter)
+    
+    diff = TP / 2.5
+
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"]):
@@ -107,7 +124,7 @@ def calc_file_diff(file_path, mods=["nm", "nm"]):
     return calc_diff(bm, mods)
 
 
-def calculate_IP_vs_time(file_path):
+def calc_IP_vs_time(file_path):
         
     bm = load_beatmap(file_path)
 
@@ -122,7 +139,7 @@ def calculate_IP_vs_time(file_path):
         Ds_MTs.append(extract_D_MT(prev_obj, curr_obj, diameter))
         times.append(curr_obj['startTime'])
 
-    IPs = [calculate_IP(D, diameter, MT) for (D, MT) in Ds_MTs]
+    IPs = [calc_IP(D, diameter, MT) for (D, MT) in Ds_MTs]
 
     return (IPs, times)
 

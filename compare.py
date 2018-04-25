@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-from diff_cal import calc_file_diff
+from diff_calc import calc_file_diff
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@
              "highscore",
              "cold_green_eyes",
              "best_friends",
-             "shiori"]
+             "shiori"],
     
+    "test": ["diff_test_1",
+    		 "diff_test_2"]
 }
