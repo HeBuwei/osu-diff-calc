@@ -17,7 +17,12 @@ def calc_diff(beatmap, mods=["nm", "nm"]):
     apply_mods(beatmap, mods)
     
     aim_diff = calc_aim_diff_corrected(beatmap)
-    return aim_diff
+    tap_diff = calc_tap_diff(beatmap)
+
+    i = 7.0
+    overall_diff = ((aim_diff ** i + tap_diff ** i) / 2) ** (1/i)
+
+    return (aim_diff, tap_diff, overall_diff)
 
 
 def remove_spinners(beatmap):
@@ -44,19 +49,18 @@ def apply_mods(beatmap, mods):
 
 def speed_up(hit_objects, factor):
 
-    for hit_object in hit_objects:
+    for obj in hit_objects:
 
-        hit_object["startTime"] = hit_object["startTime"] / factor
+        obj["startTime"] = obj["startTime"] / factor
 
-        if "endTime" in hit_object:
-            hit_object["endTime"] = hit_object["endTime"] / factor
+        if "endTime" in obj:
+            obj["endTime"] = obj["endTime"] / factor
 
 
 def calc_aim_diff_naive(beatmap):
 
     hit_objects = beatmap['hitObjects']
     diameter = cs_to_diameter(beatmap["CsAfterMods"])
-
     Ds_MTs = []
 
     for obj1, obj2 in zip(hit_objects, hit_objects[1:]):
@@ -64,7 +68,7 @@ def calc_aim_diff_naive(beatmap):
 
     TP = calc_throughput(Ds_MTs, diameter)
     
-    diff = TP / 2.5
+    diff = TP / 2.3
     return diff
 
 
@@ -72,7 +76,6 @@ def calc_aim_diff_corrected(beatmap):
 
     hit_objects = beatmap['hitObjects']
     diameter = cs_to_diameter(beatmap["CsAfterMods"])
-    
     Ds_MTs = []
 
     for obj1, obj2, obj3 in zip(hit_objects, hit_objects[1:], hit_objects[2:]):
@@ -82,7 +85,7 @@ def calc_aim_diff_corrected(beatmap):
 
     TP = calc_throughput(Ds_MTs, diameter)
 
-    diff = TP / 2.6
+    diff = TP / 2.4
     return diff
 
 
@@ -170,6 +173,26 @@ def extract_D_MT_corrected(diameter, obj1, obj2, obj3=None):
         D = D * (1 + correction_obj3)
     
     return (D, MT)
+
+
+def calc_tap_diff(beatmap):
+    
+    hit_objects = beatmap['hitObjects']
+    curr_strain = 0.0
+    prev_time = 0
+    max_strain = 0.0
+    # strain_history = []
+
+    for obj in hit_objects:
+        curr_time = obj['startTime']
+        curr_strain *= 0.25 ** ((curr_time - prev_time) / 1000.0)
+        curr_strain += 1.0
+        # strain_history.append((curr_strain, curr_time))
+        max_strain = max(max_strain, curr_strain)
+        prev_time = curr_time
+
+    diff = max_strain / 1.6
+    return diff
 
 
 def cs_to_diameter(cs):
