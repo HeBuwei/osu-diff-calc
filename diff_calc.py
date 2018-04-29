@@ -7,8 +7,8 @@ from fitts_law import calc_throughput, calc_IP
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"]):
-    bm = load_beatmap(file_path)
-    return calc_diff(bm, mods)
+    beatmap = load_beatmap(file_path)
+    return calc_diff(beatmap, mods)
 
 
 def calc_diff(beatmap, mods=["nm", "nm"]):
@@ -20,9 +20,30 @@ def calc_diff(beatmap, mods=["nm", "nm"]):
     tap_diff = calc_tap_diff(beatmap)
 
     i = 7.0
-    overall_diff = ((aim_diff ** i + tap_diff ** i) / 2) ** (1/i)
+    overall_diff = 1.07 * ((aim_diff ** i + tap_diff ** i) / 2) ** (1/i)
 
     return (aim_diff, tap_diff, overall_diff)
+
+
+def analyze_file_aim_diff(file_path, mods=["nm", "nm"]):
+    beatmap = load_beatmap(file_path)
+    return analyze_aim_diff(beatmap, mods)
+
+
+def analyze_aim_diff(beatmap, mods=["nm", "nm"]):
+
+    remove_spinners(beatmap)
+    apply_mods(beatmap, mods)
+    
+    cs = float(beatmap['CircleSize'])
+    diameter = cs_to_diameter(cs)
+
+    aim_diff, Ds_MTs = calc_aim_diff_corrected(beatmap, analysis=True)
+
+    IPs = [calc_IP(D, diameter, MT) for (D, MT, time) in Ds_MTs]
+    times = [time for (D, MT, time) in Ds_MTs]
+
+    return (IPs, times)
 
 
 def remove_spinners(beatmap):
@@ -72,7 +93,7 @@ def calc_aim_diff_naive(beatmap):
     return diff
 
 
-def calc_aim_diff_corrected(beatmap):
+def calc_aim_diff_corrected(beatmap, analysis=False):
 
     hit_objects = beatmap['hitObjects']
     diameter = cs_to_diameter(beatmap["CsAfterMods"])
@@ -84,9 +105,12 @@ def calc_aim_diff_corrected(beatmap):
     Ds_MTs.append(extract_D_MT_corrected(diameter, hit_objects[-2], hit_objects[-1]))
 
     TP = calc_throughput(Ds_MTs, diameter)
+    diff = TP / 2.64
 
-    diff = TP / 2.4
-    return diff
+    if analysis:
+        return (diff, Ds_MTs)
+    else:
+        return diff
 
 
 # Extract distance (D) and movement time (MT) between 2 hit objects
@@ -172,7 +196,7 @@ def extract_D_MT_corrected(diameter, obj1, obj2, obj3=None):
 
         D = D * (1 + correction_obj3)
     
-    return (D, MT)
+    return (D, MT, obj2['startTime'])
 
 
 def calc_tap_diff(beatmap):

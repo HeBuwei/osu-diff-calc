@@ -38,7 +38,7 @@ def calc_fc_prob_minus_threshold(TP, Ds_MTs, W):
 def calc_fc_prob(TP, Ds_MTs, W):
     fc_prob = 1.0
 
-    for (D, MT) in Ds_MTs:
+    for (D, MT, _) in Ds_MTs:
         hit_prob = calc_hit_prob(D, W, MT, TP)
         fc_prob *= hit_prob
 
@@ -50,7 +50,7 @@ def calc_fc_prob(TP, Ds_MTs, W):
 # with diameter W at distance D within movement time MT
 def calc_hit_prob(D, W, MT, TP):
     
-    a = 0.0
+    a = 0.01
 
     if D == 0:
         return 1.0

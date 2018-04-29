@@ -17,11 +17,15 @@ if __name__ == "__main__":
     results = []
 
     for filename in map_pack_to_compare:
+        songname = filename.rsplit('.', maxsplit=1)[0]
         aim_diff, tap_diff, overall_diff = calc_file_diff("data/maps/" + filename)
-        msg = '{:6.3f} - '.format(aim_diff) + '{:6.3f} - '.format(tap_diff) + '{:6.3f} - '.format(overall_diff) + filename
+        msg = ('{:6.3f} - '.format(aim_diff) 
+               + '{:6.3f} - '.format(tap_diff) 
+               + '{:6.3f} - '.format(overall_diff) 
+               + songname)
         results.append((aim_diff, tap_diff, overall_diff, msg))
 
-    sorted_results = sorted(results, key=lambda tup:tup[2])
+    sorted_results = sorted(results, key=lambda tup:tup[0])
 
     for tup in sorted_results:
         print(tup[3])
