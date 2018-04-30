@@ -1,33 +1,43 @@
 {
-    "tech":
-        ["dark_steering",
-         "atomos"],
+    "tech": [
+        ["dark_steering", "-"],
+        ["atomos", "-"]
+    ],
 
-    "jump":
-        ["no_title",
-         "airman",
-         "highscore",
-         "cold_green_eyes",
-         "best_friends",
-         "shiori"],
+    "jump": [
+        ["no_title", "-"],
+        ["airman", "-"],
+        ["highscore", "-"],
+        ["cold_green_eyes", "-"],
+        ["best_friends", "-"],
+        ["shiori", "-"]
+    ],
     
-    "test":
-        ["diff_test_1",
-		 "diff_test_2"],
+    "test": [
+        ["diff_test_1", "-"],
+        ["diff_test_2", "-"]
+    ],
 
-    "5":
-        ["basara", "cold_green_eyes", "best_friends", "shiori", "musouka"],
+    "5": [
+        ["basara", "-"],
+        ["cold_green_eyes", "-"],
+        ["best_friends", "-"],
+        ["shiori", "-"],
+        ["musouka", "-"]
+    ],
 
 
-    "7+":
-        ["dark_steering",
-         "atomos",
-         "highscore",
-         "ewf",
-         "imagemat",
-         "genryuu",
-         "fd",
-         "inferno",
-         "cry_thunder",
-         "ryoushi_no_umi"]
+    "7+": [
+        ["dark_steering", "-"],
+        ["atomos", "-"],
+        ["highscore", "-"],
+        ["ewf", "-"],
+        ["imagemat", "-"],
+        ["genryuu", "-"],
+        ["fd", "-"],
+        ["inferno", "-"],
+        ["cry_thunder", "-"],
+        ["ryoushi_no_umi", "-"],
+        ["shiori", "dt"]
+    ]
 }
