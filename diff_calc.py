@@ -10,7 +10,7 @@ from beatmap import load_beatmap
 from fitts_law import calc_throughput, calc_IP, calc_hit_prob
 
 
-Movement = namedtuple('Movement', ['D', 'MT', 'time', 'corr0', 'corr3'])
+Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0'])
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"]):
@@ -52,10 +52,10 @@ def analyze_diff(beatmap, mods=["nm", "nm"]):
     miss_probs = [1 - calc_hit_prob(mvmt.D, diameter, mvmt.MT, TP) for mvmt in movements]
     IPs = [calc_IP(mvmt.D, diameter, mvmt.MT) for mvmt in movements]
     times = [mvmt.time for mvmt in movements]
-    corr0s = [mvmt.corr0 for mvmt in movements]
-    corr3s = [mvmt.corr3 for mvmt in movements]
+    IPs_raw = [calc_IP(mvmt.D_raw, diameter, mvmt.MT) for mvmt in movements]
+    IPs_corr0 = [calc_IP(mvmt.D_corr0, diameter, mvmt.MT) for mvmt in movements]
 
-    return (miss_probs, IPs, times, corr0s, corr3s, strain_history)
+    return (miss_probs, IPs, times, IPs_raw, IPs_corr0, strain_history)
 
 
 def remove_spinners(beatmap):
@@ -125,7 +125,7 @@ def calc_aim_diff(beatmap, analysis=False):
         movements.append(extract_movement(diameter, hit_objects[-2], hit_objects[-1], obj0=hit_objects[-3]))
 
     TP = calc_throughput(movements, diameter)
-    diff = TP ** 0.93 * 0.47
+    diff = TP ** 0.85 * 0.594
 
     if analysis:
         return (TP, movements)
@@ -259,17 +259,21 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         tap_strain = obj2['tapStrain']
         IP = calc_IP(D, diameter, MT)
 
-        correction_tap = expit((np.average(tap_strain) / IP - 0.8) * 7) * 0.2
+        correction_tap = expit((np.average(tap_strain) / IP - 1) * 12) * 0.2
 
 
+    # apply the corrections
 
+    D_raw = D
     # MT -= 0.05 * correction_obj0
     # D *= 1 + correction_obj0
-    D += correction_obj0 * diameter * 2
+    
+    D_corr0 = D_raw + correction_obj0 * diameter * 2
 
-    D *= 1 + correction_tap
+    D_corr_tap = D_corr0 * (1 + correction_tap)
+    # D_corr_tap = D_corr0
 
-    return Movement(D, MT, obj2['startTime'], correction_obj0, correction_tap)
+    return Movement(D_corr_tap, MT, obj2['startTime'], D_raw, D_corr0)
 
 
 def calc_tap_diff(beatmap, analysis=False):
@@ -293,12 +297,12 @@ def calc_tap_diff(beatmap, analysis=False):
             strain_history.append((list(curr_strain), curr_time))
 
         max_strain = np.maximum(max_strain, curr_strain)
-        obj['tapStrain'] = curr_strain
+        obj['tapStrain'] = curr_strain.copy()
 
         curr_strain += k
         prev_time = curr_time
 
-    diff = np.average(max_strain) ** 0.93 * 0.62
+    diff = np.average(max_strain) ** 0.85 * 0.765
 
     if analysis:
         return strain_history

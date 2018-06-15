@@ -17,15 +17,19 @@ if __name__ == "__main__":
     else:
         mods_str = '-'
 
-    miss_probs, IPs, times, corr0s, corr3s, strain_history = diff_calc.analyze_file_diff('data/maps/' + name + '.json', str_to_mods(mods_str))
+    miss_probs, IPs, times, IPs_raw, IPs_corr0, strain_history = diff_calc.analyze_file_diff('data/maps/' + name + '.json', str_to_mods(mods_str))
 
     
     fig, axarr = plt.subplots(2, sharex=True)
     
     axarr[0].plot(times, IPs, '.', alpha=0.8)
-    ax_corr = axarr[0].twinx()
-    ax_corr.set(ylim=[0, 1])
-    ax_corr.plot(times, corr0s, 'r.', times, corr3s, 'g.', markersize=2, alpha=0.3)
+    axarr[0].vlines(times, IPs_raw, IPs_corr0, colors=(1.0,0.5,0.5,0.8), linewidths=1)
+    axarr[0].vlines(times, IPs_corr0, IPs, colors=(0.3,1.0,0.3,0.8), linewidths=1)
+
+    # ax_corr = axarr[0].twinx()
+    # ax_corr.set(ylim=[0, 1])
+    # ax_corr.plot(times, corr0s, 'r.', times, corr3s, 'g.', markersize=2, alpha=0.3)
+    # ax_corr.fill_between(times, corr0s, corr3s, where=corr3s>corr0s)
 
     axarr[1].plot(times, miss_probs, '.', alpha=0.8)
 
