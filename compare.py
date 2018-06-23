@@ -27,7 +27,7 @@ if __name__ == "__main__":
         msg += songname + " " + map_n_mods[1]
         results.append(diffs + (msg,))
 
-    sorted_results = sorted(results, key=lambda tup:tup[2])
+    sorted_results = sorted(results, key=lambda tup:tup[0])
 
     for tup in sorted_results:
         print(tup[-1])

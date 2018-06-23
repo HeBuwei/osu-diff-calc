@@ -198,7 +198,11 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     else: 
         raise Exception  
 
+    
+    IP = calc_IP(D, diameter, MT)
 
+
+    # Correction #1 - The Previous Object
     # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Very empirical, may need tweaking
     correction_obj0 = 0
@@ -231,7 +235,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
     
 
-
+    # Correction #2 - The Next Object
     # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Again, very empirical
     # correction_obj3 = 0
@@ -252,14 +256,48 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         # D *= 1 + correction_obj3
 
 
+    # Correction #3 - Tap Strain
+    # Estimate how tap strain affects difficulty
     correction_tap = 0
 
     if 'tapStrain' in obj2 and D > 0:
 
         tap_strain = obj2['tapStrain']
-        IP = calc_IP(D, diameter, MT)
+        
 
         correction_tap = expit((np.average(tap_strain) / IP - 1) * 12) * 0.2
+
+
+
+    # Correction #4 - Cheesing
+    # The player might make the movement of obj1 -> obj2 easier by 
+    # hitting obj1 early and obj2 late. 
+
+    correction_early = correction_late = 0
+
+    if D > 0:
+
+        if obj0 is not None:
+            D01 = calc_distance(obj0['position'], obj1['position'])
+            MT01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
+            MT01_recp = 1 / MT01
+            IP01 = calc_IP(D01, diameter, MT01)
+        else:
+            MT01_recp = 0
+            IP01 = 0
+
+        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/MT + MT01_recp)) * 0.12
+
+        if obj3 is not None:
+            D23 = calc_distance(obj2['position'], obj3['position'])
+            MT23 = (obj3['startTime'] - obj2['startTime']) / 1000.0
+            MT23_recp = 1 / MT23
+            IP23 = calc_IP(D23, diameter, MT23)
+        else:
+            MT23_recp = 0
+            IP23 = 0
+
+        correction_late = expit((IP23 / IP - 0.6) * (-15)) * (1 / (1/MT + MT23_recp)) * 0.12
 
 
     # apply the corrections
@@ -272,6 +310,8 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
     D_corr_tap = D_corr0 * (1 + correction_tap)
     # D_corr_tap = D_corr0
+
+    MT += correction_early + correction_late
 
     return Movement(D_corr_tap, MT, obj2['startTime'], D_raw, D_corr0)
 
