@@ -10,7 +10,7 @@ from beatmap import load_beatmap
 from fitts_law import calc_throughput, calc_IP, calc_hit_prob
 
 
-Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0'])
+Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"]):
@@ -29,8 +29,8 @@ def calc_diff(beatmap, mods=["nm", "nm"]):
     i = 7.0
     overall_diff = (aim_diff ** i + tap_diff[0] ** i) ** (1/i) * 0.968
 
-    return (aim_diff,) + tap_diff[:1] + (overall_diff,)
-    # return (aim_diff,) + tap_diff + (overall_diff,)
+    # return (aim_diff,) + tap_diff[:1] + (overall_diff,)
+    return (aim_diff,) + tap_diff + (overall_diff,)
 
 
 def analyze_file_diff(file_path, mods=["nm", "nm"]):
@@ -46,7 +46,7 @@ def analyze_diff(beatmap, mods=["nm", "nm"]):
     cs = float(beatmap['CircleSize'])
     diameter = cs_to_diameter(cs)
 
-    strain_history = calc_tap_diff(beatmap, analysis=True)
+    tap_strains = calc_tap_diff(beatmap, analysis=True)
     TP, movements = calc_aim_diff(beatmap, analysis=True)
 
     miss_probs = [1 - calc_hit_prob(mvmt.D, diameter, mvmt.MT, TP) for mvmt in movements]
@@ -54,8 +54,9 @@ def analyze_diff(beatmap, mods=["nm", "nm"]):
     times = [mvmt.time for mvmt in movements]
     IPs_raw = [calc_IP(mvmt.D_raw, diameter, mvmt.MT) for mvmt in movements]
     IPs_corr0 = [calc_IP(mvmt.D_corr0, diameter, mvmt.MT) for mvmt in movements]
+    aim_strains = [mvmt.aim_strain for mvmt in movements]
 
-    return (miss_probs, IPs, times, IPs_raw, IPs_corr0, strain_history)
+    return (miss_probs, IPs, times, IPs_raw, IPs_corr0, aim_strains, tap_strains)
 
 
 def remove_spinners(beatmap):
@@ -109,6 +110,22 @@ def calc_aim_diff(beatmap, analysis=False):
 
     hit_objects = beatmap['hitObjects']
     diameter = cs_to_diameter(beatmap["CsAfterMods"])
+
+    movements = extract_movements(hit_objects, diameter)
+    
+    adjusted_movements = calc_adjusted_movements(movements, diameter)
+
+    TP = calc_throughput(adjusted_movements, diameter)
+    diff = TP ** 0.85 * 0.606
+
+    if analysis:
+        return (TP, adjusted_movements)
+    else:
+        return diff
+
+
+def extract_movements(hit_objects, diameter):
+
     movements = []
 
     if len(hit_objects) == 2:
@@ -124,45 +141,38 @@ def calc_aim_diff(beatmap, analysis=False):
 
         movements.append(extract_movement(diameter, hit_objects[-2], hit_objects[-1], obj0=hit_objects[-3]))
 
-    TP = calc_throughput(movements, diameter)
-    diff = TP ** 0.85 * 0.594
-
-    if analysis:
-        return (TP, movements)
-    else:
-        return diff
+    return movements
 
 
-# Extract distance (D) and movement time (MT) between 2 hit objects
-# def extract_D_MT(diameter, obj1, obj2):
-    
-#     if obj1['objectName'] == 'slider':
+# Returns a new list of movements, of which the MT is adjusted based on aim strain
+def calc_adjusted_movements(movements, diameter):
 
-#         finishPosition = get_finish_position(obj1)
+    adjusted_movements = []
+    curr_strain = 0
+    prev_time = 0.0
+    k = 2
 
-#         # long sliders (when the slider tail matters)
-#         D_long = max(calc_distance(finishPosition, obj2['position']) - 1.5 * diameter, 0.0)
-#         MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
+    for mvmt in movements:
 
-#         # short sliders (when the slider head matters) (treat as a circle)
-#         D_short = calc_distance(obj1['position'], obj2['position'])
-#         MT_short = (obj2['startTime'] - obj1['startTime']) / 1000.0
+        curr_time = mvmt.time
+        curr_strain *= np.exp(-k * (curr_time - prev_time))
 
-#         if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
-#             D = D_long
-#             MT = MT_long
-#         else:
-#             D = D_short
-#             MT = MT_short
+        IP_old = calc_IP(mvmt.D, diameter, mvmt.MT)
 
-#     elif obj1['objectName'] == 'circle':
-#         D = calc_distance(obj1['position'], obj2['position'])
-#         MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
-    
-#     else:
-#         raise Exception
-    
-#     return (D, MT)
+        if IP_old == 0:
+            adjustment = 0
+        else:
+            adjustment = expit((curr_strain / IP_old - 0.7) * 15) * 0.1 - 0.05
+
+        MT_new = mvmt.MT / (1 + adjustment)
+
+        adjusted_movements.append(mvmt._replace(aim_strain=curr_strain))
+        # adjusted_movements.append(mvmt._replace(MT=MT_new, aim_strain=curr_strain))
+
+        curr_strain += np.log2(mvmt.D / diameter + 1) * k
+        prev_time = curr_time
+
+    return adjusted_movements
 
 
 # Extract information about the movement from obj1 and obj2
@@ -205,33 +215,41 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # Correction #1 - The Previous Object
     # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Very empirical, may need tweaking
-    correction_obj0 = 0
+    correction_snap = 0
+    correction_flow = 0
 
     if obj0 is not None:
         
         s01 = (np.array(obj1['position']) - np.array(obj0['position'])) / diameter
         s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         
-        t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
-        t12 = MT
+        if s12.dot(s12) == 0:          
+            correction_lvl_snap = 0
+            correction_lvl_flow = 0
+            correction_snap = 0
 
-        a01 = -4 * s01 / t01 ** 2
-        a12 = 4 * s12 / t12 ** 2
-
-        if a12.dot(a12) == 0:
-            correction_lvl_obj0 = 0
         else:
+            t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
+            t12 = MT
+
+            v01 = s01 / t01
+            v12 = s12 / t12
+            dv = v12 - v01
+
+            a01 = -4 * s01 / t01 ** 2
+            a12 = 4 * s12 / t12 ** 2
             da = a12 - a01
-            # correction_lvl_obj0 = (norm(da) / (norm(a12) + norm(a01))) ** 2
-            correction_lvl_obj0 = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
 
-        # if np.sqrt(s12.dot(s12)) == 0:
-        #     correction_lvl_obj0 = 0
-        # else:
-        #     correction_lvl_obj0 = (s20.dot(-s12) / np.sqrt(s12.dot(s12)) + np.sqrt(s20.dot(s20))) / diameter / 2
+            correction_lvl_flow = dv.dot(dv) / (2 * (v12.dot(v12) + v01.dot(v01)))
+            correction_lvl_snap = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
 
-        snappiness = expit((norm(s12) - 1.3) * 4)
-        correction_obj0 = 0.5 ** (t01 * 5) * correction_lvl_obj0 * snappiness * 1
+            flowiness = expit((norm(s12) - 1.5) * (-10))
+            snappiness = expit((norm(s12) - 1.35) * 10)
+
+            # correction_flow = 0.5 ** (t01 * 5) * correction_lvl_flow * flowiness * 1
+            # correction_snap = 0.5 ** (t01 * 5) * correction_lvl_snap * snappiness * 1
+            correction_flow = 0.5 ** (t01 / t12 / 2) * correction_lvl_flow * flowiness * 1
+            correction_snap = 0.5 ** (t01 / t12 / 2) * correction_lvl_snap * snappiness * 1
 
     
 
@@ -261,11 +279,8 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     correction_tap = 0
 
     if 'tapStrain' in obj2 and D > 0:
-
         tap_strain = obj2['tapStrain']
-        
-
-        correction_tap = expit((np.average(tap_strain) / IP - 1) * 12) * 0.2
+        correction_tap = expit((np.average(tap_strain) / IP - 1) * 15) * 0.2
 
 
 
@@ -286,7 +301,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT01_recp = 0
             IP01 = 0
 
-        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/MT + MT01_recp)) * 0.12
+        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.12
 
         if obj3 is not None:
             D23 = calc_distance(obj2['position'], obj3['position'])
@@ -297,30 +312,30 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT23_recp = 0
             IP23 = 0
 
-        correction_late = expit((IP23 / IP - 0.6) * (-15)) * (1 / (1/MT + MT23_recp)) * 0.12
+        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.12
 
 
     # apply the corrections
 
     D_raw = D
-    # MT -= 0.05 * correction_obj0
-    # D *= 1 + correction_obj0
+    # MT -= 0.05 * correction_snap
+    # D *= 1 + correction_snap
     
-    D_corr0 = D_raw + correction_obj0 * diameter * 2
+    D_corr0 = D_raw + correction_flow * D_raw * 1.5 + correction_snap * 1.5 * diameter
 
     D_corr_tap = D_corr0 * (1 + correction_tap)
     # D_corr_tap = D_corr0
 
     MT += correction_early + correction_late
 
-    return Movement(D_corr_tap, MT, obj2['startTime'], D_raw, D_corr0)
+    return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
 
 
 def calc_tap_diff(beatmap, analysis=False):
     
     # k = np.array([0.3, 1.5, 7.5])
     # k = np.exp(np.linspace(1.6, -2, num=9))
-    k = np.exp(np.linspace(1.7, -1.5, num=4))
+    k = np.exp(np.linspace(1.7, -1.6, num=4))
 
     hit_objects = beatmap['hitObjects']
     curr_strain = np.zeros_like(k)
@@ -342,7 +357,7 @@ def calc_tap_diff(beatmap, analysis=False):
         curr_strain += k
         prev_time = curr_time
 
-    diff = np.average(max_strain) ** 0.85 * 0.765
+    diff = np.average(max_strain) ** 0.85 * 0.768
 
     if analysis:
         return strain_history
@@ -397,4 +412,6 @@ if __name__ == "__main__":
 
     diff = calc_file_diff('data/maps/' + name + '.json', str_to_mods(mods_str))
 
-    print(diff)
+    msg = ' | '.join(['{:6.3f}'.format(x) for x in diff])
+
+    print(msg)
