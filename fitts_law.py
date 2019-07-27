@@ -38,9 +38,9 @@ def calc_fc_prob_minus_threshold(TP, movements, W):
 def calc_fc_prob(TP, movements, W):
     fc_prob = 1.0
 
-    for D_MT in movements:
-        D = D_MT[0]
-        MT = D_MT[1]
+    for mvmt in movements:
+        D = mvmt[0]
+        MT = mvmt[1]
         hit_prob = calc_hit_prob(D, W, MT, TP)
         fc_prob *= hit_prob
 

@@ -13,12 +13,12 @@ from fitts_law import calc_throughput, calc_IP, calc_hit_prob
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
 
 
-def calc_file_diff(file_path, mods=["nm", "nm"]):
+def calc_file_diff(file_path, mods=["nm", "nm"], tap_detail=False):
     beatmap = load_beatmap(file_path)
-    return calc_diff(beatmap, mods)
+    return calc_diff(beatmap, mods, tap_detail)
 
 
-def calc_diff(beatmap, mods=["nm", "nm"]):
+def calc_diff(beatmap, mods=["nm", "nm"], tap_detail=False):
     
     remove_spinners(beatmap)
     apply_mods(beatmap, mods)
@@ -29,8 +29,10 @@ def calc_diff(beatmap, mods=["nm", "nm"]):
     i = 7.0
     overall_diff = (aim_diff ** i + tap_diff[0] ** i) ** (1/i) * 0.968
 
-    # return (aim_diff,) + tap_diff[:1] + (overall_diff,)
-    return (aim_diff,) + tap_diff + (overall_diff,)
+    if tap_detail:
+        return (aim_diff,) + tap_diff + (overall_diff,)
+    else:
+        return (aim_diff,) + tap_diff[:1] + (overall_diff,)
 
 
 def analyze_file_diff(file_path, mods=["nm", "nm"]):
@@ -116,7 +118,7 @@ def calc_aim_diff(beatmap, analysis=False):
     adjusted_movements = calc_adjusted_movements(movements, diameter)
 
     TP = calc_throughput(adjusted_movements, diameter)
-    diff = TP ** 0.85 * 0.606
+    diff = TP ** 0.85 * 0.618
 
     if analysis:
         return (TP, adjusted_movements)
@@ -240,38 +242,51 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             a12 = 4 * s12 / t12 ** 2
             da = a12 - a01
 
+
+            # Version 1
             correction_lvl_flow = dv.dot(dv) / (2 * (v12.dot(v12) + v01.dot(v01)))
             correction_lvl_snap = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
 
-            flowiness = expit((norm(s12) - 1.5) * (-10))
-            snappiness = expit((norm(s12) - 1.35) * 10)
+            flowiness = expit((norm(s12) - 1.45) * (-10))
+            snappiness = expit((norm(s12) - 1.4) * 10)
 
-            # correction_flow = 0.5 ** (t01 * 5) * correction_lvl_flow * flowiness * 1
-            # correction_snap = 0.5 ** (t01 * 5) * correction_lvl_snap * snappiness * 1
             correction_flow = 0.5 ** (t01 / t12 / 2) * correction_lvl_flow * flowiness * 1
             correction_snap = 0.5 ** (t01 / t12 / 2) * correction_lvl_snap * snappiness * 1
 
-    
+
 
     # Correction #2 - The Next Object
     # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Again, very empirical
-    # correction_obj3 = 0
+    correction_obj3 = 0
 
     # if obj3 is not None:
 
-    #     s1 = (np.array(obj2['position']) - np.array(finish_position)) / diameter 
-    #     s2 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter 
+    #     s1 = (np.array(obj1['position']) - np.array(obj2['position'])) / diameter
+    #     s3 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
 
-    #     if s1.dot(s1) == 0:
-    #         correction_lvl_obj3 = 0
-    #     else:
-    #         correction_lvl_obj3 = (s2.dot(s1) / np.sqrt(s1.dot(s1)) + np.sqrt(s2.dot(s2))) / 2
-        
-    #     t2 = (obj3['startTime'] - obj2['startTime']) / 1000.0
-    #     correction_obj3 = min(0.5, max(0, correction_lvl_obj3 - 1)) * max(0, 1 - 2.5 * t2)
+    #     # t1 = -1
+    #     # t3 = (obj3['startTime'] - obj2['startTime']) / (obj2['startTime'] - obj1['startTime'])
 
-        # D *= 1 + correction_obj3
+    #     t1 = (obj1['startTime'] - obj2['startTime']) / 1000
+    #     t3 = (obj3['startTime'] - obj2['startTime']) / 1000
+
+    #     x_params = np.linalg.solve(np.array([[t1*t1/2, t1],
+    #                                          [t3*t3/2, t3]]),
+    #                                np.array([s1[0], s3[0]]))
+
+    #     y_params = np.linalg.solve(np.array([[t1*t1/2, t1],
+    #                                          [t3*t3/2, t3]]),
+    #                                np.array([s1[1], s3[1]]))
+
+    #     a = np.array([x_params[0], y_params[0]])
+    #     v = np.array([x_params[1], y_params[1]])
+
+
+    #     print(obj2['startTime'], ", ",
+    #           ' | '.join(['{:6.3f}'.format(x) for x in [norm(v), norm(v)/(IP+0.1), v[0], v[1], a[0], a[1]]]))
+        # print(a, ", ", v)
+
 
 
     # Correction #3 - Tap Strain
