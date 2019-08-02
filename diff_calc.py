@@ -4,11 +4,17 @@ from collections import namedtuple
 import numpy as np
 from scipy.special import expit
 from scipy.linalg import norm
+from scipy import optimize
 
 from mods import str_to_mods
 from beatmap import load_beatmap
-from fitts_law import calc_throughput, calc_IP, calc_hit_prob
+from fitts_law import calc_IP, calc_hit_prob
 
+
+P_THRESHOLD = 0.02
+
+TP_MIN = 0.1
+TP_MAX = 100
 
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
 
@@ -344,6 +350,46 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     MT += correction_early + correction_late
 
     return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
+
+
+# calculates the throughput required to fc the map with probability P_THRESHOLD
+def calc_throughput(movements, W):
+
+    fc_prob_TP_min = calc_fc_prob(TP_MIN, movements, W)
+    
+    # if map is so easy that players with minimum throughput can fc with decent possibility
+    if fc_prob_TP_min >= P_THRESHOLD:
+        return TP_MIN
+
+    fc_prob_TP_max = calc_fc_prob(TP_MAX, movements, W)
+
+    # if map is too hard 
+    if fc_prob_TP_max <= P_THRESHOLD:
+        return TP_MAX
+
+    # x, r = optimize.brentq(calc_fc_prob_minus_threshold, TP_MIN, TP_MAX, args=(movements, W), full_output=True)
+    # print(r.iterations)
+
+    x = optimize.brentq(calc_fc_prob_minus_threshold, TP_MIN, TP_MAX, args=(movements, W))
+
+    return x
+
+
+def calc_fc_prob_minus_threshold(TP, movements, W):
+    return calc_fc_prob(TP, movements, W) - P_THRESHOLD
+    
+
+def calc_fc_prob(TP, movements, W):
+    fc_prob = 1.0
+
+    for mvmt in movements:
+        D = mvmt[0]
+        MT = mvmt[1]
+        hit_prob = calc_hit_prob(D, W, MT, TP)
+        fc_prob *= hit_prob
+
+    # print('' + str(TP) + ' | ' + str(fc_prob))
+    return fc_prob
 
 
 def calc_tap_diff(beatmap, analysis=False):
