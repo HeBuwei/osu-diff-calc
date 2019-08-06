@@ -18,6 +18,7 @@ AIM_MIN = 0.1
 AIM_MAX = 100
 
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
+State = namedtuple('State', ['t', 'p', 'sigma_p', 'v', 'sigma_v'])
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"], tap_detail=False):
@@ -190,171 +191,171 @@ def calc_aim_skill(hit_objects, W):
 
 # Extract information about the movement from obj1 and obj2
 # including D, MT, end time of the movement, and the factors of correction
-# def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
+def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     
-#     if obj1['objectName'] == 'slider':
+    if obj1['objectName'] == 'slider':
 
-#         finish_position = get_finish_position(obj1)
+        finish_position = get_finish_position(obj1)
 
-#         # long sliders (when the slider tail matters)
-#         D_long = max(calc_distance(finish_position, obj2['position']) - 1.5 * diameter, 0.0)
-#         MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
+        # long sliders (when the slider tail matters)
+        D_long = max(calc_distance(finish_position, obj2['position']) - 1.5 * diameter, 0.0)
+        MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
 
-#         # short sliders (when the slider head matters) (treat as a circle)
-#         D_short = calc_distance(obj1['position'], obj2['position'])
-#         MT_short = (obj2['startTime'] - obj1['startTime']) / 1000.0
+        # short sliders (when the slider head matters) (treat as a circle)
+        D_short = calc_distance(obj1['position'], obj2['position'])
+        MT_short = (obj2['startTime'] - obj1['startTime']) / 1000.0
 
-#         if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
-#             D = D_long
-#             MT = MT_long
-#         else:
-#             D = D_short
-#             MT = MT_short
+        if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
+            D = D_long
+            MT = MT_long
+        else:
+            D = D_short
+            MT = MT_short
 
-#     elif obj1['objectName'] == 'circle':
+    elif obj1['objectName'] == 'circle':
 
-#         finish_position = obj1['position']
+        finish_position = obj1['position']
 
-#         D = calc_distance(obj1['position'], obj2['position'])
-#         MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
+        D = calc_distance(obj1['position'], obj2['position'])
+        MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
     
-#     else: 
-#         raise Exception  
+    else: 
+        raise Exception  
 
     
-#     IP = calc_IP(D, diameter, MT)
+    IP = calc_IP(D, diameter, MT)
 
 
-#     # Correction #1 - The Previous Object
-#     # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
-#     # Very empirical, may need tweaking
-#     correction_snap = 0
-#     correction_flow = 0
+    # Correction #1 - The Previous Object
+    # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
+    # Very empirical, may need tweaking
+    correction_snap = 0
+    correction_flow = 0
 
-#     if obj0 is not None:
+    if obj0 is not None:
         
-#         s01 = (np.array(obj1['position']) - np.array(obj0['position'])) / diameter
-#         s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
+        s01 = (np.array(obj1['position']) - np.array(obj0['position'])) / diameter
+        s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         
-#         if s12.dot(s12) == 0:          
-#             correction_lvl_snap = 0
-#             correction_lvl_flow = 0
-#             correction_snap = 0
+        if s12.dot(s12) == 0:          
+            correction_lvl_snap = 0
+            correction_lvl_flow = 0
+            correction_snap = 0
 
-#         else:
-#             t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
-#             t12 = MT
+        else:
+            t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
+            t12 = MT
 
-#             v01 = s01 / t01
-#             v12 = s12 / t12
-#             dv = v12 - v01
+            v01 = s01 / t01
+            v12 = s12 / t12
+            dv = v12 - v01
 
-#             a01 = -4 * s01 / t01 ** 2
-#             a12 = 4 * s12 / t12 ** 2
-#             da = a12 - a01
-
-
-#             # Version 1
-#             correction_lvl_flow = dv.dot(dv) / (2 * (v12.dot(v12) + v01.dot(v01)))
-#             correction_lvl_snap = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
-
-#             flowiness = expit((norm(s12) - 1.45) * (-10))
-#             snappiness = expit((norm(s12) - 1.4) * 10)
-
-#             correction_flow = 0.5 ** (t01 / t12 / 2) * correction_lvl_flow * flowiness * 1
-#             correction_snap = 0.5 ** (t01 / t12 / 2) * correction_lvl_snap * snappiness * 1
+            a01 = -4 * s01 / t01 ** 2
+            a12 = 4 * s12 / t12 ** 2
+            da = a12 - a01
 
 
+            # Version 1
+            correction_lvl_flow = dv.dot(dv) / (2 * (v12.dot(v12) + v01.dot(v01)))
+            correction_lvl_snap = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
 
-#     # Correction #2 - The Next Object
-#     # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
-#     # Again, very empirical
-#     correction_obj3 = 0
+            flowiness = expit((norm(s12) - 1.45) * (-10))
+            snappiness = expit((norm(s12) - 1.4) * 10)
 
-#     # if obj3 is not None:
-
-#     #     s1 = (np.array(obj1['position']) - np.array(obj2['position'])) / diameter
-#     #     s3 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
-
-#     #     # t1 = -1
-#     #     # t3 = (obj3['startTime'] - obj2['startTime']) / (obj2['startTime'] - obj1['startTime'])
-
-#     #     t1 = (obj1['startTime'] - obj2['startTime']) / 1000
-#     #     t3 = (obj3['startTime'] - obj2['startTime']) / 1000
-
-#     #     x_params = np.linalg.solve(np.array([[t1*t1/2, t1],
-#     #                                          [t3*t3/2, t3]]),
-#     #                                np.array([s1[0], s3[0]]))
-
-#     #     y_params = np.linalg.solve(np.array([[t1*t1/2, t1],
-#     #                                          [t3*t3/2, t3]]),
-#     #                                np.array([s1[1], s3[1]]))
-
-#     #     a = np.array([x_params[0], y_params[0]])
-#     #     v = np.array([x_params[1], y_params[1]])
-
-
-#     #     print(obj2['startTime'], ", ",
-#     #           ' | '.join(['{:6.3f}'.format(x) for x in [norm(v), norm(v)/(IP+0.1), v[0], v[1], a[0], a[1]]]))
-#         # print(a, ", ", v)
+            correction_flow = 0.5 ** (t01 / t12 / 2) * correction_lvl_flow * flowiness * 1
+            correction_snap = 0.5 ** (t01 / t12 / 2) * correction_lvl_snap * snappiness * 1
 
 
 
-#     # Correction #3 - Tap Strain
-#     # Estimate how tap strain affects difficulty
-#     correction_tap = 0
+    # Correction #2 - The Next Object
+    # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
+    # Again, very empirical
+    correction_obj3 = 0
 
-#     if 'tapStrain' in obj2 and D > 0:
-#         tap_strain = obj2['tapStrain']
-#         correction_tap = expit((np.average(tap_strain) / IP - 1) * 15) * 0.2
+    # if obj3 is not None:
 
+    #     s1 = (np.array(obj1['position']) - np.array(obj2['position'])) / diameter
+    #     s3 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
 
+    #     # t1 = -1
+    #     # t3 = (obj3['startTime'] - obj2['startTime']) / (obj2['startTime'] - obj1['startTime'])
 
-#     # Correction #4 - Cheesing
-#     # The player might make the movement of obj1 -> obj2 easier by 
-#     # hitting obj1 early and obj2 late. 
+    #     t1 = (obj1['startTime'] - obj2['startTime']) / 1000
+    #     t3 = (obj3['startTime'] - obj2['startTime']) / 1000
 
-#     correction_early = correction_late = 0
+    #     x_params = np.linalg.solve(np.array([[t1*t1/2, t1],
+    #                                          [t3*t3/2, t3]]),
+    #                                np.array([s1[0], s3[0]]))
 
-#     if D > 0:
+    #     y_params = np.linalg.solve(np.array([[t1*t1/2, t1],
+    #                                          [t3*t3/2, t3]]),
+    #                                np.array([s1[1], s3[1]]))
 
-#         if obj0 is not None:
-#             D01 = calc_distance(obj0['position'], obj1['position'])
-#             MT01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
-#             MT01_recp = 1 / MT01
-#             IP01 = calc_IP(D01, diameter, MT01)
-#         else:
-#             MT01_recp = 0
-#             IP01 = 0
-
-#         correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.12
-
-#         if obj3 is not None:
-#             D23 = calc_distance(obj2['position'], obj3['position'])
-#             MT23 = (obj3['startTime'] - obj2['startTime']) / 1000.0
-#             MT23_recp = 1 / MT23
-#             IP23 = calc_IP(D23, diameter, MT23)
-#         else:
-#             MT23_recp = 0
-#             IP23 = 0
-
-#         correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.12
+    #     a = np.array([x_params[0], y_params[0]])
+    #     v = np.array([x_params[1], y_params[1]])
 
 
-#     # apply the corrections
+    #     print(obj2['startTime'], ", ",
+    #           ' | '.join(['{:6.3f}'.format(x) for x in [norm(v), norm(v)/(IP+0.1), v[0], v[1], a[0], a[1]]]))
+        # print(a, ", ", v)
 
-#     D_raw = D
-#     # MT -= 0.05 * correction_snap
-#     # D *= 1 + correction_snap
+
+
+    # Correction #3 - Tap Strain
+    # Estimate how tap strain affects difficulty
+    correction_tap = 0
+
+    if 'tapStrain' in obj2 and D > 0:
+        tap_strain = obj2['tapStrain']
+        correction_tap = expit((np.average(tap_strain) / IP - 1) * 15) * 0.2
+
+
+
+    # Correction #4 - Cheesing
+    # The player might make the movement of obj1 -> obj2 easier by 
+    # hitting obj1 early and obj2 late. 
+
+    correction_early = correction_late = 0
+
+    if D > 0:
+
+        if obj0 is not None:
+            D01 = calc_distance(obj0['position'], obj1['position'])
+            MT01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
+            MT01_recp = 1 / MT01
+            IP01 = calc_IP(D01, diameter, MT01)
+        else:
+            MT01_recp = 0
+            IP01 = 0
+
+        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.12
+
+        if obj3 is not None:
+            D23 = calc_distance(obj2['position'], obj3['position'])
+            MT23 = (obj3['startTime'] - obj2['startTime']) / 1000.0
+            MT23_recp = 1 / MT23
+            IP23 = calc_IP(D23, diameter, MT23)
+        else:
+            MT23_recp = 0
+            IP23 = 0
+
+        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.12
+
+
+    # apply the corrections
+
+    D_raw = D
+    # MT -= 0.05 * correction_snap
+    # D *= 1 + correction_snap
     
-#     D_corr0 = D_raw + correction_flow * D_raw * 1.5 + correction_snap * 1.5 * diameter
+    D_corr0 = D_raw + correction_flow * D_raw * 1.5 + correction_snap * 1.5 * diameter
 
-#     D_corr_tap = D_corr0 * (1 + correction_tap)
-#     # D_corr_tap = D_corr0
+    D_corr_tap = D_corr0 * (1 + correction_tap)
+    # D_corr_tap = D_corr0
 
-#     MT += correction_early + correction_late
+    MT += correction_early + correction_late
 
-#     return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
+    return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
 
 
 
@@ -366,12 +367,42 @@ def calc_fc_prob(aim, hit_objects, W):
 
     fc_prob = 1.0
 
-    for i in range(len(hit_objects) - 3):
-        fc_prob *= math.erf(2.066 * (2**aim-1) / 2**0.5)
+    depth = 4
+
+    if len(hit_objects) < depth:
+        return fc_prob
+
+    
+
+    for i in range(len(hit_objects) - depth + 1):
+
+        objs = hit_objects[i:i+depth]
+        state0 = State(obj0['startTime'], obj0['position'], 0, [0, 0], 0)
+
+        states = [[] for x in range(depth)]
+        states[0].append(state0)
+
+        for j in range(0, depth - 1):
+
+            for state in states[j]:
+            
+                next_state = calc_next_state(aim, state, objs[j+1])
+
+
+
+
+
+        # fc_prob *= math.erf(2.066 * (2**aim-1) / 2**0.5)
 
     return fc_prob
 
     
+def calc_next_state(aim, state, obj):
+
+    
+
+
+
 
 
 def calc_tap_diff(beatmap, analysis=False):
