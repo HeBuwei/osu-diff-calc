@@ -156,18 +156,31 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
                     correction0 = 0.2
 
                 else:
-                    cos_012 = np.clip(s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+                    cos_012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
 
                     correction_moving = correction0_moving_spline(cos_012) * 1.0
 
                     correction_still = 0.2
 
                     movingness = expit(norm(s01) * 2) * 2 - 1
+                    # correction0 = 0
                     correction0 = movingness * correction_moving + (1-movingness) * correction_still
 
 
             elif t_ratio < 1/1.7:
-                pass
+
+                if norm(s01) == 0:
+                    correction0 = 0
+
+                else:
+                    cos_012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+                    # correction0 = 0
+                    correction0 = (1 - cos_012) * expit((norm(s01)*t_ratio - 1.5) * 4) * 0.5
+
+
+                    # print(obj2['startTime'], ' ', correction0)
+
+
             else:
                 pass
 
@@ -257,7 +270,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # D *= 1 + correction_snap
     
     # D_corr0 = D_raw
-    D_corr0 = D_raw + correction0 * D_raw * 0.5 + correction0 * diameter * 0.5 
+    D_corr0 = D_raw + correction0 * D_raw * 0.6 + correction0 * diameter * 0.2
 
     D_corr_tap = D_corr0 * (1 + correction_tap)
     # D_corr_tap = D_corr0
