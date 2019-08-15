@@ -2,6 +2,7 @@ import csv
 import sys
 import os
 import json
+from time import localtime, strftime
 from diff_calc import calc_diff
 from mods import str_to_mods
 from beatmap import load_beatmap
@@ -50,12 +51,13 @@ if __name__ == "__main__":
 
     # print(" Aim      Tap     Overall")
 
-    with open('data/results.csv', 'w', newline='') as csvfile:
+    time_str = strftime("%H%M%S", localtime())
+
+    with open('data/{}.csv'.format(time_str), 'w', newline='') as csvfile:
         cw = csv.writer(csvfile)
         cw.writerow([" Aim  ", " Tap  ", " Overall"])
         for result in sorted_results:
             cw.writerow(result)
-
 
     # for tup in sorted_results:
     #     print(tup[-1])

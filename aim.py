@@ -5,7 +5,7 @@ import numpy as np
 from scipy import optimize
 from scipy.special import expit
 from scipy.linalg import norm
-from scipy.interpolate import CubicHermiteSpline
+from scipy.interpolate import interp1d, CubicHermiteSpline
 import matplotlib.pyplot as plt
 
 
@@ -37,7 +37,7 @@ def calc_aim_diff(beatmap, analysis=False):
     adjusted_movements = calc_adjusted_movements(movements, diameter)
 
     TP = calc_throughput(adjusted_movements, diameter)
-    diff = TP ** 0.85 * 0.618
+    diff = TP ** 0.85 * 0.593
 
     if analysis:
         return (TP, adjusted_movements)
@@ -275,20 +275,78 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
 
 def calc_correction0_flow(d, x0, y0):
-    return expit(3 * sqrt((x0+sqrt(d))**2 + y0**2 + 1) + 2*d - 7.5)
+    
+    a = [0.5, 1, 1.5, 2]
+    
+    k = interp1d(a, [-6,-7.5,-8,-8.2], bounds_error=False, fill_value=(-6,-8.2))(d)
+
+    coeffs = np.array([[[-0.5,0,5],
+                        [-0.35,0.35,0],
+                        [-0.35,-0.35,0]],
+                       [[-1,0,4],
+                        [-0.7,0.7,1],
+                        [-0.7,-0.7,1]],
+                       [[-1.5,0,2],
+                        [-1,1,2],
+                        [-1,-1,2]],
+                       [[-2,0,2],
+                        [-1.4,1.4,2],
+                        [-1.4,-1.4,2]]])
+
+    components = interp1d(a, coeffs, axis=0, bounds_error=False, 
+                          fill_value=([[-0.5,0,5],
+                                       [-0.35,0.35,0],
+                                       [-0.35,-0.35,0]],
+                                      [[-2,0,2],
+                                       [-1.4,1.4,2],
+                                       [-1.4,-1.4,2]]))(d)                                    
+    correction_raw = k
+
+    for c in components:
+        correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
+
+    return expit(correction_raw)
 
 
 def calc_correction0_snap(d, x0, y0):
 
-    h = np.piecewise(d, [d<1, 1<=d<3, 3<=d<4, d>=4],
-                     [lambda d:0.2, lambda d:0.3*d-0.1, lambda d:-0.2*d+1.4, lambda d:2.4/(-1/(d-3)+5)])
+    a = [1.5, 2.5, 4, 6]
+    
+    k = interp1d(a, [-1,-5.9,-5.3,-2.4], bounds_error=False, fill_value=(-1,-2.4))(d)
 
-    k = np.piecewise(d, [d<1, 1<=d<3, 3<=d<3.5, d>=3.5],
-                     [lambda d:0, lambda d:-2.5*d+2.5, lambda d:-5, lambda d:d-8.5])
+    coeffs = np.array([[[2,0,1],
+                        [1.6,2,0],
+                        [1.6,2,0],
+                        [0,0,0]],
+                       [[3,0,1],
+                        [1.8,2.4,0.3],
+                        [1.8,-2.4,0.3],
+                        [0,0,-0.3]],
+                       [[4,0,0.6],
+                        [2,4,0.24],
+                        [2,-4,0.24],
+                        [-1,0,-0.3]],
+                       [[5,0,0.4],
+                        [2.5,4,0.16],
+                        [2.5,-4,0.16],
+                        [-1.25,0,-0.32]]])
 
-    b = np.piecewise(d, [d<4, d>=4], [lambda d:d, lambda d:-1/(d-3)+5])
+    components = interp1d(a, coeffs, axis=0, bounds_error=False, 
+                          fill_value=([[2,0,1],
+                                       [1.6,2,0],
+                                       [1.6,2,0],
+                                       [0,0,0]],
+                                      [[5,0,0.4],
+                                       [2.5,4,0.16],
+                                       [2.5,-4,0.16],
+                                       [-1.25,0,-0.32]]))(d)
+    correction_raw = k
 
-    return expit(1.14115 * h * sqrt((x0-b)**2 + 0.876307*(1+y0**2)) + 0.549755*h*(-x0+b) + k)
+    for c in components:
+        correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
+
+
+    return expit(correction_raw)
 
 
 # Returns a new list of movements, of which the MT is adjusted based on aim strain
