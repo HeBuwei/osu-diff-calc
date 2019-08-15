@@ -41,9 +41,10 @@ if __name__ == "__main__":
 
         # results.append(diffs + (msg,))
 
-        results.append(list(diffs) + [map_n_mods[1], beatmap["Title"] + " [" + beatmap["Version"] + "]", beatmap_id])
+        results.append(['{:6.3f}'.format(d) for d in list(diffs)] + 
+                       [map_n_mods[1], beatmap["Title"] + " [" + beatmap["Version"] + "]", beatmap_id])
 
-    # sorted_results = sorted(results, key=lambda tup:tup[0])
+    sorted_results = sorted(results, key=lambda tup:tup[0])
     # sorted_results = sorted(results, key=lambda tup:tup[1])
     # sorted_results = sorted(results, key=lambda tup:tup[-1])
 
@@ -51,7 +52,8 @@ if __name__ == "__main__":
 
     with open('data/results.csv', 'w', newline='') as csvfile:
         cw = csv.writer(csvfile)
-        for result in results:
+        cw.writerow([" Aim  ", " Tap  ", " Overall"])
+        for result in sorted_results:
             cw.writerow(result)
 
 
