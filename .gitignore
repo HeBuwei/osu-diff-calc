@@ -1,5 +1,5 @@
 node_modules/
-data/maps/
 *.pyc
 Readings/
 map_packs.json
+data/

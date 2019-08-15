@@ -1,3 +1,4 @@
+import csv
 import sys
 import os
 import json
@@ -32,19 +33,27 @@ if __name__ == "__main__":
         else:
             beatmap_id = ""
 
-        # map_name = beatmap_id + " " + beatmap["Title"] + " [" + beatmap["Version"] + "]"
-        map_name = "{:.40} [{:.20}] {}".format(beatmap["Title"], beatmap["Version"], beatmap_id)
+        # # map_name = beatmap_id + " " + beatmap["Title"] + " [" + beatmap["Version"] + "]"
+        # map_name = "{:.40} [{:.20}] {}".format(beatmap["Title"], beatmap["Version"], beatmap_id)
 
-        msg = ''.join(['{:6.3f} | '.format(diff) for diff in diffs])
-        msg += map_n_mods[1] + " " + map_name
-        results.append(diffs + (msg,))
+        # msg = ''.join(['{:6.3f} | '.format(diff) for diff in diffs])
+        # msg += map_n_mods[1] + " " + map_name
 
-    sorted_results = sorted(results, key=lambda tup:tup[0])
+        # results.append(diffs + (msg,))
+
+        results.append(list(diffs) + [map_n_mods[1], beatmap["Title"] + " [" + beatmap["Version"] + "]", beatmap_id])
+
+    # sorted_results = sorted(results, key=lambda tup:tup[0])
     # sorted_results = sorted(results, key=lambda tup:tup[1])
     # sorted_results = sorted(results, key=lambda tup:tup[-1])
 
-    print(" Aim      Tap     Overall")
+    # print(" Aim      Tap     Overall")
+
+    with open('data/results.csv', 'w', newline='') as csvfile:
+        cw = csv.writer(csvfile)
+        for result in results:
+            cw.writerow(result)
 
 
-    for tup in sorted_results:
-        print(tup[-1])
+    # for tup in sorted_results:
+    #     print(tup[-1])

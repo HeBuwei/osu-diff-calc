@@ -1,4 +1,5 @@
 from collections import namedtuple
+from math import sqrt
 
 import numpy as np
 from scipy import optimize
@@ -17,9 +18,9 @@ TP_MIN = 0.1
 TP_MAX = 100
 
 
-correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.5,-0.3,0.6,1]),
-                                               np.array([0,0.6,1,1,0.6]), 
-                                               np.array([0.8,2,0.8,-0.8,-0.8]))
+correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
+                                               np.array([0.6,1,1,0.6,0]), 
+                                               np.array([0.8,0.8,-0.8,-2,-0.8]))
 
 
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
@@ -104,8 +105,6 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # Correction #1 - The Previous Object
     # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Very empirical, may need tweaking
-    # correction_snap = 0
-    # correction_flow = 0
 
     correction0 = 0
 
@@ -115,11 +114,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         
         if norm(s12) == 0:
-            # correction_lvl_snap = 0
-            # correction_lvl_flow = 0
-            # correction_snap = 0
             correction0 = 0
-
 
         else:
             t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
@@ -134,57 +129,55 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             da = a12 - a01
 
 
-            # Version 1
-            # correction_lvl_flow = dv.dot(dv) / (2 * (v12.dot(v12) + v01.dot(v01)))
-            # correction_lvl_snap = da.dot(da) / (2 * (a12.dot(a12) + a01.dot(a01)))
-
-            # flowiness = expit((norm(s12) - 1.45) * (-10))
-            # snappiness = expit((norm(s12) - 1.4) * 10)
-
-            # correction_flow = 0.5 ** (t01 / t12 / 2) * correction_lvl_flow * flowiness * 1
-            # correction_snap = 0.5 ** (t01 / t12 / 2) * correction_lvl_snap * snappiness * 1
-
-
-            # Version 2
-
             t_ratio = t12 / t01
 
-            if t_ratio > 1.7:
+            if t_ratio > 1.4:
                 # s01*t_ratio, s12
 
                 if norm(s01) == 0:
                     correction0 = 0.2
 
                 else:
-                    cos_012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+                    cos012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
 
-                    correction_moving = correction0_moving_spline(cos_012) * 1.0
+                    correction_moving = correction0_moving_spline(cos012) * 1.0
 
                     correction_still = 0.2
 
                     movingness = expit(norm(s01) * 2) * 2 - 1
                     # correction0 = 0
-                    correction0 = movingness * correction_moving + (1-movingness) * correction_still
+                    correction0 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.8
 
 
-            elif t_ratio < 1/1.7:
+            elif t_ratio < 1/1.4:
 
                 if norm(s01) == 0:
                     correction0 = 0
 
                 else:
-                    cos_012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+                    cos012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+
                     # correction0 = 0
-                    correction0 = (1 - cos_012) * expit((norm(s01)*t_ratio - 1.5) * 4) * 0.5
-
-
-                    # print(obj2['startTime'], ' ', correction0)
-
+                    correction0 = (1 - cos012) * expit((norm(s01)*t_ratio - 1.5) * 4) * 0.3
 
             else:
-                pass
+
+                normalized_pos0 = -s01 / t01 * t12
+                
+                d = norm(s12)
+                x0 = normalized_pos0.dot(s12) / d
+                y0 = norm(normalized_pos0 - x0 * s12 / d)
 
 
+                correction0_flow = calc_correction0_flow(d, x0, y0)
+                correction0_snap = calc_correction0_snap(d, x0, y0)
+
+                i = -10
+                
+                # correction0 = 0
+                correction0 = ((correction0_flow**i + correction0_snap**i) / 2) ** (1/i)
+
+                # print('{:8} {:6.3f} {:6.3f}'.format(obj2['startTime'], correction0_flow, correction0_snap))
 
 
 
@@ -270,7 +263,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # D *= 1 + correction_snap
     
     # D_corr0 = D_raw
-    D_corr0 = D_raw + correction0 * D_raw * 0.6 + correction0 * diameter * 0.2
+    D_corr0 = D_raw + correction0 * D_raw
 
     D_corr_tap = D_corr0 * (1 + correction_tap)
     # D_corr_tap = D_corr0
@@ -280,6 +273,22 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
 
 
+
+def calc_correction0_flow(d, x0, y0):
+    return expit(3 * sqrt((x0+sqrt(d))**2 + y0**2 + 1) + 2*d - 7.5)
+
+
+def calc_correction0_snap(d, x0, y0):
+
+    h = np.piecewise(d, [d<1, 1<=d<3, 3<=d<4, d>=4],
+                     [lambda d:0.2, lambda d:0.3*d-0.1, lambda d:-0.2*d+1.4, lambda d:2.4/(-1/(d-3)+5)])
+
+    k = np.piecewise(d, [d<1, 1<=d<3, 3<=d<3.5, d>=3.5],
+                     [lambda d:0, lambda d:-2.5*d+2.5, lambda d:-5, lambda d:d-8.5])
+
+    b = np.piecewise(d, [d<4, d>=4], [lambda d:d, lambda d:-1/(d-3)+5])
+
+    return expit(1.14115 * h * sqrt((x0-b)**2 + 0.876307*(1+y0**2)) + 0.549755*h*(-x0+b) + k)
 
 
 # Returns a new list of movements, of which the MT is adjusted based on aim strain
