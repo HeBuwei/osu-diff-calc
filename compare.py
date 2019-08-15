@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     time_str = strftime("%H%M%S", localtime())
 
-    with open('data/{}.csv'.format(time_str), 'w', newline='') as csvfile:
+    with open('data/results/{}.csv'.format(time_str), 'w', newline='') as csvfile:
         cw = csv.writer(csvfile)
         cw.writerow([" Aim  ", " Tap  ", " Overall"])
         for result in sorted_results:

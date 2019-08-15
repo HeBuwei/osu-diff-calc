@@ -119,16 +119,6 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         else:
             t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
             t12 = MT
-
-            v01 = s01 / t01
-            v12 = s12 / t12
-            dv = v12 - v01
-
-            a01 = -4 * s01 / t01 ** 2
-            a12 = 4 * s12 / t12 ** 2
-            da = a12 - a01
-
-
             t_ratio = t12 / t01
 
             if t_ratio > 1.4:
@@ -141,7 +131,6 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
                     cos012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
 
                     correction_moving = correction0_moving_spline(cos012) * 1.0
-
                     correction_still = 0.2
 
                     movingness = expit(norm(s01) * 2) * 2 - 1
@@ -184,34 +173,50 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # Correction #2 - The Next Object
     # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
     # Again, very empirical
-    correction_obj3 = 0
+    correction3 = 0
 
-    # if obj3 is not None:
+    if obj3 is not None:
 
-    #     s1 = (np.array(obj1['position']) - np.array(obj2['position'])) / diameter
-    #     s3 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
+        s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
+        s23 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
 
-    #     # t1 = -1
-    #     # t3 = (obj3['startTime'] - obj2['startTime']) / (obj2['startTime'] - obj1['startTime'])
+        if norm(s12) == 0:
+            correction3 = 0
 
-    #     t1 = (obj1['startTime'] - obj2['startTime']) / 1000
-    #     t3 = (obj3['startTime'] - obj2['startTime']) / 1000
+        else:
+            t12 = MT
+            t23 = (obj3['startTime'] - obj2['startTime']) / 1000.0
+            t_ratio = t12 / t23
 
-    #     x_params = np.linalg.solve(np.array([[t1*t1/2, t1],
-    #                                          [t3*t3/2, t3]]),
-    #                                np.array([s1[0], s3[0]]))
+            if t_ratio > 1.4:
 
-    #     y_params = np.linalg.solve(np.array([[t1*t1/2, t1],
-    #                                          [t3*t3/2, t3]]),
-    #                                np.array([s1[1], s3[1]]))
+                if norm(s23) == 0:
+                    correction3 = 0.2
 
-    #     a = np.array([x_params[0], y_params[0]])
-    #     v = np.array([x_params[1], y_params[1]])
+                else:
+                    cos123 = np.clip(-s12.dot(s23) / norm(s12) / norm(s23), -1, 1)
 
+                    correction_moving = correction0_moving_spline(cos123) * 1.0
+                    correction_still = 0.2
 
-    #     print(obj2['startTime'], ", ",
-    #           ' | '.join(['{:6.3f}'.format(x) for x in [norm(v), norm(v)/(IP+0.1), v[0], v[1], a[0], a[1]]]))
-        # print(a, ", ", v)
+                    movingness = expit(norm(s23) * 2) * 2 - 1
+                    # correction3 = 0
+                    correction3 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.8
+
+            elif t_ratio < 1/1.4:
+
+                if norm(s23) == 0:
+                    correction3 = 0
+
+                else:
+                    cos123 = np.clip(-s12.dot(s23) / norm(s12) / norm(s23), -1, 1)
+
+                    # correction3 = 0
+                    correction3 = (1 - cos123) * expit((norm(s23)*t_ratio - 1.5) * 4) * 0.3
+
+            else:
+                pass
+
 
 
 
@@ -263,7 +268,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     # D *= 1 + correction_snap
     
     # D_corr0 = D_raw
-    D_corr0 = D_raw + correction0 * D_raw
+    D_corr0 = D_raw * (1 + correction0 + correction3)
 
     D_corr_tap = D_corr0 * (1 + correction_tap)
     # D_corr_tap = D_corr0
@@ -294,12 +299,7 @@ def calc_correction0_flow(d, x0, y0):
                         [-1.4,-1.4,2]]])
 
     components = interp1d(a, coeffs, axis=0, bounds_error=False, 
-                          fill_value=([[-0.5,0,5],
-                                       [-0.35,0.35,0],
-                                       [-0.35,-0.35,0]],
-                                      [[-2,0,2],
-                                       [-1.4,1.4,2],
-                                       [-1.4,-1.4,2]]))(d)                                    
+                          fill_value=(coeffs[0], coeffs[-1]))(d)                                    
     correction_raw = k
 
     for c in components:
@@ -332,19 +332,11 @@ def calc_correction0_snap(d, x0, y0):
                         [-1.25,0,-0.32]]])
 
     components = interp1d(a, coeffs, axis=0, bounds_error=False, 
-                          fill_value=([[2,0,1],
-                                       [1.6,2,0],
-                                       [1.6,2,0],
-                                       [0,0,0]],
-                                      [[5,0,0.4],
-                                       [2.5,4,0.16],
-                                       [2.5,-4,0.16],
-                                       [-1.25,0,-0.32]]))(d)
+                          fill_value=(coeffs[0], coeffs[-1]))(d)
     correction_raw = k
 
     for c in components:
         correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
-
 
     return expit(correction_raw)
 
