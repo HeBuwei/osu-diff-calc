@@ -50,7 +50,7 @@ if __name__ == "__main__":
         ax.plot(times_tap, s, '.-', markersize=3, color=next(iter_colors))
 
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Aim Strain (notes/s)")
+    ax.set_ylabel("Tap Strain (notes/s)")
     # strains0 = [x[0][0] for x in tap_strains]
     # strains1 = [x[0][1] for x in tap_strains]
     # strains2 = [x[0][2] for x in tap_strains]
