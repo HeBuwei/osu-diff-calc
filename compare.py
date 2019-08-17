@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     with open('data/results/{}.csv'.format(time_str), 'w', newline='') as csvfile:
         cw = csv.writer(csvfile)
-        cw.writerow([" Aim  ", " Tap  ", " Overall"])
+        cw.writerow([" Aim  ", " Tap  ", " Overall", "Mods", "Beatmap", "ID"])
         for result in sorted_results:
             cw.writerow(result)
 

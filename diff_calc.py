@@ -10,8 +10,6 @@ from fitts_law import calc_IP, calc_hit_prob
 from aim import calc_aim_diff, cs_to_diameter
 
 
-
-
 def calc_file_diff(file_path, mods=["nm", "nm"], tap_detail=False):
     beatmap = load_beatmap(file_path)
     return calc_diff(beatmap, mods, tap_detail)
@@ -92,23 +90,6 @@ def speed_up(hit_objects, factor):
             obj["endTime"] = obj["endTime"] / factor
 
 
-# def calc_aim_diff_naive(beatmap):
-
-#     hit_objects = beatmap['hitObjects']
-#     diameter = cs_to_diameter(beatmap["CsAfterMods"])
-#     movements = []
-
-#     for obj1, obj2 in zip(hit_objects, hit_objects[1:]):
-#         movements.append(extract_D_MT(diameter, obj1, obj2))
-
-#     TP = calc_throughput(movements, diameter)
-    
-#     diff = TP / 2.3
-#     return diff
-
-
-
-
 def calc_tap_diff(beatmap, analysis=False):
     
     # k = np.array([0.3, 1.5, 7.5])
@@ -135,18 +116,12 @@ def calc_tap_diff(beatmap, analysis=False):
         curr_strain += k
         prev_time = curr_time
 
-    diff = np.average(max_strain) ** 0.85 * 0.768
+    diff = np.average(max_strain) ** 0.85 * 0.778
 
     if analysis:
         return strain_history
     else:
         return (diff,) + tuple(max_strain)
-
-
-
-
-def calc_distance(pos1, pos2):
-    return ((pos1[0]-pos2[0]) ** 2 + (pos1[1]-pos2[1]) ** 2) ** 0.5
 
 
 def get_finish_position(slider):

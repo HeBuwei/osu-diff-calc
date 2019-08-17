@@ -8,7 +8,6 @@ from scipy.linalg import norm
 from scipy.interpolate import interp1d, CubicHermiteSpline
 import matplotlib.pyplot as plt
 
-
 from fitts_law import calc_IP, calc_hit_prob
 
 
@@ -21,6 +20,97 @@ TP_MAX = 100
 correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
                                                np.array([0.6,1,1,0.6,0]), 
                                                np.array([0.8,0.8,-0.8,-2,-0.8]))
+
+
+# Data for correction calculation
+# Refer to https://www.wolframcloud.com/obj/hebuweitom/Published/Correction.nb
+# for the effects of the data in graphs
+# obj0 - flow
+a0f = [0.5, 1, 1.5, 2]
+k0f = interp1d(a0f, [-6,-8,-9.5,-8.2], bounds_error=False, fill_value=(-6,-8.2))
+
+coeffs0f = np.array([[[-0.5,0,5],
+                      [-0.35,0.35,0],
+                      [-0.35,-0.35,0]],
+                     [[-1,0,4],
+                      [-0.7,0.7,1],
+                      [-0.7,-0.7,1]],
+                     [[-1.5,0,2],
+                      [-1,1,2],
+                      [-1,-1,2]],
+                     [[-2,0,2],
+                      [-1.4,1.4,2],
+                      [-1.4,-1.4,2]]])
+
+components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False, fill_value=(coeffs0f[0], coeffs0f[-1]))
+
+# obj0 - snap
+a0s = [1.5, 2.5, 4, 6]
+k0s = interp1d(a0s, [-1,-5.9,-5.3,-2.4], bounds_error=False, fill_value=(-1,-2.4))
+
+coeffs0s = np.array([[[2,0,1],
+                      [1.6,2,0],
+                      [1.6,2,0],
+                      [0,0,0]],
+                     [[3,0,1],
+                      [1.8,2.4,0.3],
+                      [1.8,-2.4,0.3],
+                      [0,0,-0.3]],
+                     [[4,0,0.6],
+                      [2,4,0.24],
+                      [2,-4,0.24],
+                      [-1,0,-0.3]],
+                     [[5,0,0.4],
+                      [2.5,4,0.16],
+                      [2.5,-4,0.16],
+                      [-1.25,0,-0.32]]])
+
+components0s = interp1d(a0s, coeffs0s, axis=0, bounds_error=False, 
+                      fill_value=(coeffs0s[0], coeffs0s[-1]))
+
+# obj3 - flow
+a3f = [0, 1, 2, 3]
+k3f = interp1d(a3f, [-4,-4,-4.5,-2.5], bounds_error=False, fill_value=(-4,-2.5))
+
+coeffs3f = np.array([[[0,0,0,1.5],
+                      [0,0,0,2]],
+                     [[1,0,0,1.5],
+                      [0,0,0,2]],
+                     [[2,0,0,1],
+                      [0,0,0,2.5]],
+                     [[4,0,0,0],
+                      [0,0,0,3.5]]])
+
+components3f = interp1d(a3f, coeffs3f, axis=0, bounds_error=False, 
+                      fill_value=(coeffs3f[0], coeffs3f[-1]))
+
+# obj3 - snap
+a3s = [1.5, 2.5, 4, 6]
+k3s = interp1d(a3s, [-1.8,-3,-5.9,-6], bounds_error=False, fill_value=(-1.8,-6))
+
+coeffs3s = np.array([[[-2,0,1,0.4],
+                      [-1,1.4,1,0],
+                      [-1,-1.4,1,0],
+                      [0,0,0,2],
+                      [1,0,1,-1]],
+                     [[-3,0,1,0.2],
+                      [-1.5,2.1,1,0.2],
+                      [-1.5,-2.1,1,0.2],
+                      [0,0,0,1],
+                      [1.5,0,1,-0.6]],
+                     [[-4,0,1,0.4],
+                      [-2,2.8,1,0.4],
+                      [-2,-2.8,1,0.4],
+                      [0,0,0,0.4],
+                      [2,0,1,-0.4]],
+                     [[-5,0,1,0.4],
+                      [-2.5,3.5,1,0.4],
+                      [-2.5,-3.5,1,0.4],
+                      [0,0,0,0.4],
+                      [2.5,0,1,-0.4]]])
+
+components3s = interp1d(a3s, coeffs3s, axis=0, bounds_error=False, 
+                      fill_value=(coeffs3s[0], coeffs3s[-1]))
 
 
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
@@ -37,7 +127,7 @@ def calc_aim_diff(beatmap, analysis=False):
     adjusted_movements = calc_adjusted_movements(movements, diameter)
 
     TP = calc_throughput(adjusted_movements, diameter)
-    diff = TP ** 0.85 * 0.593
+    diff = TP ** 0.85 * 0.585
 
     if analysis:
         return (TP, adjusted_movements)
@@ -73,6 +163,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
         finish_position = get_finish_position(obj1)
 
+        # This is only a temporary algorithm to sliders
         # long sliders (when the slider tail matters)
         D_long = max(calc_distance(finish_position, obj2['position']) - 1.5 * diameter, 0.0)
         MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
@@ -101,11 +192,15 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     
     IP = calc_IP(D, diameter, MT)
 
+    obj1_in_the_middle = False
+    obj2_in_the_middle = False
+
+    s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
+    d12 = norm (s12)
+
 
     # Correction #1 - The Previous Object
-    # Estimate how obj0 affects the difficulty of obj1 -> obj2 and make correction accordingly
-    # Very empirical, may need tweaking
-
+    # Estimate how obj0 affects the difficulty of hitting obj2
     correction0 = 0
 
     if obj0 is not None:
@@ -113,10 +208,11 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         s01 = (np.array(obj1['position']) - np.array(obj0['position'])) / diameter
         s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         
-        if norm(s12) == 0:
+        if d12 == 0:
             correction0 = 0
 
         else:
+            d01 = norm(s01)
             t01 = (obj1['startTime'] - obj0['startTime']) / 1000.0
             t12 = MT
             t_ratio = t12 / t01
@@ -124,55 +220,48 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             if t_ratio > 1.4:
                 # s01*t_ratio, s12
 
-                if norm(s01) == 0:
+                if d01 == 0:
                     correction0 = 0.2
+                    pass
 
                 else:
-                    cos012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
+                    cos012 = np.clip(-s01.dot(s12) / d01 / d12, -1, 1)
 
                     correction_moving = correction0_moving_spline(cos012) * 1.0
                     correction_still = 0.2
 
-                    movingness = expit(norm(s01) * 2) * 2 - 1
-                    # correction0 = 0
+                    movingness = expit(d01 * 2) * 2 - 1
                     correction0 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.8
 
 
             elif t_ratio < 1/1.4:
 
-                if norm(s01) == 0:
+                if d01 == 0:
                     correction0 = 0
 
                 else:
-                    cos012 = np.clip(-s01.dot(s12) / norm(s01) / norm(s12), -1, 1)
-
-                    # correction0 = 0
-                    correction0 = (1 - cos012) * expit((norm(s01)*t_ratio - 1.5) * 4) * 0.3
+                    cos012 = np.clip(-s01.dot(s12) / d01 / d12, -1, 1)
+                    correction0 = (1 - cos012) * expit((d01*t_ratio - 1.5) * 4) * 0.3
 
             else:
 
+                obj1_in_the_middle = True
                 normalized_pos0 = -s01 / t01 * t12
-                
-                d = norm(s12)
-                x0 = normalized_pos0.dot(s12) / d
-                y0 = norm(normalized_pos0 - x0 * s12 / d)
+                x0 = normalized_pos0.dot(s12) / d12
+                y0 = norm(normalized_pos0 - x0 * s12 / d12)
 
-
-                correction0_flow = calc_correction0_flow(d, x0, y0)
-                correction0_snap = calc_correction0_snap(d, x0, y0)
+                correction0_flow = calc_correction0_flow(d12, x0, y0)
+                correction0_snap = calc_correction0_snap(d12, x0, y0)
 
                 i = -10
-                
-                # correction0 = 0
                 correction0 = ((correction0_flow**i + correction0_snap**i) / 2) ** (1/i)
 
                 # print('{:8} {:6.3f} {:6.3f}'.format(obj2['startTime'], correction0_flow, correction0_snap))
 
 
 
-    # Correction #2 - The Next Object
-    # Estimate how obj3 affects the difficulty of obj1 -> obj2 and make correction accordingly
-    # Again, very empirical
+    # Correction - The Next Object
+    # Estimate how obj3 affects the difficulty of hitting obj2
     correction3 = 0
 
     if obj3 is not None:
@@ -180,47 +269,67 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         s23 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
 
-        if norm(s12) == 0:
+        if d12 == 0:
             correction3 = 0
 
         else:
+            d23 = norm(s23)
             t12 = MT
             t23 = (obj3['startTime'] - obj2['startTime']) / 1000.0
             t_ratio = t12 / t23
 
             if t_ratio > 1.4:
 
-                if norm(s23) == 0:
-                    correction3 = 0.2
-
-                else:
-                    cos123 = np.clip(-s12.dot(s23) / norm(s12) / norm(s23), -1, 1)
-
-                    correction_moving = correction0_moving_spline(cos123) * 1.0
-                    correction_still = 0.2
-
-                    movingness = expit(norm(s23) * 2) * 2 - 1
-                    # correction3 = 0
-                    correction3 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.8
-
-            elif t_ratio < 1/1.4:
-
-                if norm(s23) == 0:
+                if d23 == 0:
                     correction3 = 0
 
                 else:
-                    cos123 = np.clip(-s12.dot(s23) / norm(s12) / norm(s23), -1, 1)
+                    cos123 = np.clip(-s12.dot(s23) / d12 / d23, -1, 1)
 
-                    # correction3 = 0
-                    correction3 = (1 - cos123) * expit((norm(s23)*t_ratio - 1.5) * 4) * 0.3
+                    correction_moving = correction0_moving_spline(cos123) * 1.0
+                    correction_still = 0
+
+                    movingness = expit(d23 * 6 - 5) - expit(-5)
+                    correction3 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.5
+
+            elif t_ratio < 1/1.4:
+
+                if d23 == 0:
+                    correction3 = 0
+
+                else:
+                    cos123 = np.clip(-s12.dot(s23) / d12 / d23, -1, 1)
+                    correction3 = (1 - cos123) * expit((d23*t_ratio - 1.5) * 4) * 0.15
 
             else:
-                pass
+
+                obj2_in_the_middle = True
+                normalized_pos3 = s23 / t23 * t12
+                x0 = normalized_pos3.dot(s12) / d12
+                y0 = norm(normalized_pos3 - x0 * s12 / d12)
+
+                correction3_flow = calc_correction3_flow(d12, x0, y0)
+                correction3_snap = calc_correction3_snap(d12, x0, y0)
+
+                i = -10
+                correction3 = max(((correction3_flow**i + correction3_snap**i) / 2) ** (1/i) - 0.1, 0) * 0.5
 
 
+    # Correction #3 - 4-object pattern
+    # Estimate how the whole pattern consisting of obj0 to obj3 affects 
+    # the difficulty of hitting obj2. This only takes effect when the pattern
+    # is not so spaced (i.e. does not contain jumps) 
+    correction_pattern = 0
+
+    if obj1_in_the_middle and obj2_in_the_middle:
+
+       gap = norm(s12 - s23/2 - s01/2)
+       spacing = np.prod([((d**10 + 1) / 2) ** (1/10) for d in [d01, d12, d23]])
+
+       correction_pattern = (expit((gap-0.75)*8) - expit(-6)) * (1 - expit((spacing-3)*4)) * 0.4
 
 
-    # Correction #3 - Tap Strain
+    # Correction #4 - Tap Strain
     # Estimate how tap strain affects difficulty
     correction_tap = 0
 
@@ -230,9 +339,10 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
 
 
-    # Correction #4 - Cheesing
+    # Correction #5 - Cheesing
     # The player might make the movement of obj1 -> obj2 easier by 
-    # hitting obj1 early and obj2 late. 
+    # hitting obj1 early and obj2 late. Here we estimate the amount of 
+    # cheesing and update MT accordingly.
 
     correction_early = correction_late = 0
 
@@ -261,48 +371,23 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.12
 
 
-    # apply the corrections
-
+    # apply the corrections above
     D_raw = D
-    # MT -= 0.05 * correction_snap
-    # D *= 1 + correction_snap
-    
-    # D_corr0 = D_raw
-    D_corr0 = D_raw * (1 + correction0 + correction3)
-
+    D_corr0 = D_raw * (1 + correction0 + correction3 + correction_pattern)
     D_corr_tap = D_corr0 * (1 + correction_tap)
-    # D_corr_tap = D_corr0
 
     MT += correction_early + correction_late
 
     return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
 
 
-
+# Refer to https://www.wolframcloud.com/obj/hebuweitom/Published/Correction.nb
+# for the effects of the 4 functions below in graphs
 def calc_correction0_flow(d, x0, y0):
-    
-    a = [0.5, 1, 1.5, 2]
-    
-    k = interp1d(a, [-6,-7.5,-8,-8.2], bounds_error=False, fill_value=(-6,-8.2))(d)
 
-    coeffs = np.array([[[-0.5,0,5],
-                        [-0.35,0.35,0],
-                        [-0.35,-0.35,0]],
-                       [[-1,0,4],
-                        [-0.7,0.7,1],
-                        [-0.7,-0.7,1]],
-                       [[-1.5,0,2],
-                        [-1,1,2],
-                        [-1,-1,2]],
-                       [[-2,0,2],
-                        [-1.4,1.4,2],
-                        [-1.4,-1.4,2]]])
+    correction_raw = k0f(d)
 
-    components = interp1d(a, coeffs, axis=0, bounds_error=False, 
-                          fill_value=(coeffs[0], coeffs[-1]))(d)                                    
-    correction_raw = k
-
-    for c in components:
+    for c in components0f(d):
         correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
 
     return expit(correction_raw)
@@ -310,38 +395,36 @@ def calc_correction0_flow(d, x0, y0):
 
 def calc_correction0_snap(d, x0, y0):
 
-    a = [1.5, 2.5, 4, 6]
-    
-    k = interp1d(a, [-1,-5.9,-5.3,-2.4], bounds_error=False, fill_value=(-1,-2.4))(d)
+    correction_raw = k0s(d)
 
-    coeffs = np.array([[[2,0,1],
-                        [1.6,2,0],
-                        [1.6,2,0],
-                        [0,0,0]],
-                       [[3,0,1],
-                        [1.8,2.4,0.3],
-                        [1.8,-2.4,0.3],
-                        [0,0,-0.3]],
-                       [[4,0,0.6],
-                        [2,4,0.24],
-                        [2,-4,0.24],
-                        [-1,0,-0.3]],
-                       [[5,0,0.4],
-                        [2.5,4,0.16],
-                        [2.5,-4,0.16],
-                        [-1.25,0,-0.32]]])
-
-    components = interp1d(a, coeffs, axis=0, bounds_error=False, 
-                          fill_value=(coeffs[0], coeffs[-1]))(d)
-    correction_raw = k
-
-    for c in components:
+    for c in components0s(d):
         correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
 
     return expit(correction_raw)
 
 
+def calc_correction3_flow(d, x0, y0):
+
+    correction_raw = k3f(d)
+
+    for c in components3f(d):
+        correction_raw += c[3] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + c[2])
+
+    return expit(correction_raw)
+
+
+def calc_correction3_snap(d, x0, y0):
+
+    correction_raw = k3s(d)
+
+    for c in components3s(d):
+        correction_raw += c[3] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + c[2])
+
+    return expit(correction_raw)
+
+
 # Returns a new list of movements, of which the MT is adjusted based on aim strain
+# Currently NOT IN USE
 def calc_adjusted_movements(movements, diameter):
 
     adjusted_movements = []
@@ -413,12 +496,9 @@ def calc_fc_prob(TP, movements, W):
     return fc_prob
 
 
-
-
 def cs_to_diameter(cs):
     # formula: (32.01*(1-(0.7*(cs-5)/5))) * 2
     return 108.834 - 8.9628 * cs
-
 
 
 def calc_distance(pos1, pos2):
