@@ -34,22 +34,11 @@ if __name__ == "__main__":
         else:
             beatmap_id = ""
 
-        # # map_name = beatmap_id + " " + beatmap["Title"] + " [" + beatmap["Version"] + "]"
-        # map_name = "{:.40} [{:.20}] {}".format(beatmap["Title"], beatmap["Version"], beatmap_id)
-
-        # msg = ''.join(['{:6.3f} | '.format(diff) for diff in diffs])
-        # msg += map_n_mods[1] + " " + map_name
-
-        # results.append(diffs + (msg,))
-
         results.append(['{:6.3f}'.format(d) for d in list(diffs)] + 
                        [map_n_mods[1], beatmap["Title"] + " [" + beatmap["Version"] + "]", beatmap_id])
 
     sorted_results = sorted(results, key=lambda tup:tup[0])
     # sorted_results = sorted(results, key=lambda tup:tup[1])
-    # sorted_results = sorted(results, key=lambda tup:tup[-1])
-
-    # print(" Aim      Tap     Overall")
 
     time_str = strftime("%H%M%S", localtime())
 
@@ -58,6 +47,3 @@ if __name__ == "__main__":
         cw.writerow([" Aim  ", " Tap  ", " Overall", "Mods", "Beatmap", "ID"])
         for result in sorted_results:
             cw.writerow(result)
-
-    # for tup in sorted_results:
-    #     print(tup[-1])

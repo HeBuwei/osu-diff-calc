@@ -163,5 +163,5 @@ if __name__ == "__main__":
     diff = calc_file_diff('data/maps/' + name + '.json', str_to_mods(mods_str))
 
     msg = ' | '.join(['{:6.3f}'.format(x) for x in diff])
-
+    print(" Aim      Tap     Overall")
     print(msg)

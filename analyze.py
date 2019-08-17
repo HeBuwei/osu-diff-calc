@@ -28,8 +28,12 @@ if __name__ == "__main__":
     axarr[0].vlines(times, IPs_corr0, IPs, colors=(0.3,1.0,0.3,0.8), linewidths=1)
 
     axarr[0].plot(times, aim_strains, '.-', linewidth=0.5, markersize=2, alpha=0.5)
+    
+    axarr[0].set_ylabel("Index of Performance (bits/s)")
 
     axarr[1].plot(times, miss_probs, '.', alpha=0.8)
+    axarr[1].set_xlabel("Time (s)")
+    axarr[1].set_ylabel("Miss Probability")
 
     plt.show()
 
@@ -45,6 +49,8 @@ if __name__ == "__main__":
     for s in transposed_strains:
         ax.plot(times_tap, s, '.-', markersize=3, color=next(iter_colors))
 
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Aim Strain (notes/s)")
     # strains0 = [x[0][0] for x in tap_strains]
     # strains1 = [x[0][1] for x in tap_strains]
     # strains2 = [x[0][2] for x in tap_strains]
