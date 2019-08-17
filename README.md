@@ -1,6 +1,6 @@
 # osu-diff-calc
 
-#####Warning: This program is only a prototype and is not user friendly. 
+#### Warning: This program is only a prototype and is not user friendly. 
 
 ## Installation
 You will need Node.js and Python 3 to run this program. You will also need NumPy 1.14+, SciPy 1.3+ and MatPlotLib 2.2+
