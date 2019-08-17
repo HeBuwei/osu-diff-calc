@@ -1,4 +1,4 @@
-# osu-diff-cal
+# osu-diff-calc
 
 #####Warning: This program is only a prototype and is not user friendly. 
 
