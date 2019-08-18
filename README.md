@@ -6,23 +6,45 @@
 You will need Node.js and Python 3 to run this program. You will also need NumPy 1.14+, SciPy 1.3+ and MatPlotLib 2.2+
 
 After cloning this repo, run
-`npm install osu-parser` and `python install.py`
+```
+npm install osu-parser
+``` 
+and 
+```
+python install.py
+```
 
 ## Usage
 
 #### Adding a beatmap
-Copy the .osu file into `data/maps` folder and rename it to `<filename>.osu` so that the filename is easy to remember. After that, run `node parse.js <filename>`
+Copy the .osu file into `data/maps` folder and rename it to `<filename>.osu` so that the filename is easy to remember. After that, run 
+```
+node parse.js <filename>
+```
 
 #### Calculating the sr of one beatmap
-`python diff_calc.py <filename>` to calculate the star rating of the beatmap. Only maps you have added can be calculated.
-To calculate the sr with mods, run `python diff_calc.py <filename> <modstring>`, where `<modstring>` can be `hr`, `dt`, `ez`, `ht` and the concatenation of them.
+```
+python diff_calc.py <filename>
+``` 
+to calculate the star rating of the beatmap. Only maps you have added can be calculated.
+
+To calculate the sr with mods, run 
+```
+python diff_calc.py <filename> <modstring>
+```
+`<modstring>` can be `hr`, `dt`, `ez`, `ht` and the concatenation of them.
 
 #### Analyze beatmap using graphs
-`python analyze.py <filename> <modstring>`
-
+```
+python analyze.py <filename> <modstring>
+```
 
 #### Calculating the sr of all beatmaps (without mods)
-`python compare.py all`
+```
+python compare.py all
+```
+
+The result is saved to `data/results/<HHMMSS>.csv`. If you want to keep the result, rename it or move it to other places, so that it won't be accidentally overwritten in the future.
 
 #### Calculating the sr of a group of beatmap
 First you need to update your `map_pack.json` so that it looks like this:
@@ -41,7 +63,11 @@ First you need to update your `map_pack.json` so that it looks like this:
   ...  
 }
 ```
-Then use `python compare.py <groupname>` to calculate the sr.
+Then use 
+```
+python compare.py <groupname>
+```
+to calculate the sr. The result is saved to `data/results/<HHMMSS>.csv`.
 
 ## Explanation of Algorithm
 
