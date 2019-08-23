@@ -8,6 +8,7 @@ from mods import str_to_mods
 from beatmap import load_beatmap
 from fitts_law import calc_IP, calc_hit_prob
 from aim import calc_aim_diff, cs_to_diameter
+from tap import calc_tap_diff
 
 
 def calc_file_diff(file_path, mods=["nm", "nm"], tap_detail=False):
@@ -24,7 +25,7 @@ def calc_diff(beatmap, mods=["nm", "nm"], tap_detail=False):
     aim_diff = calc_aim_diff(beatmap)
 
     i = 7.0
-    overall_diff = (aim_diff ** i + tap_diff[0] ** i) ** (1/i) * 0.968
+    overall_diff = ((aim_diff ** i + tap_diff[0] ** i)/2) ** (1/i) * 1.069
 
     if tap_detail:
         return (aim_diff,) + tap_diff + (overall_diff,)
@@ -90,38 +91,7 @@ def speed_up(hit_objects, factor):
             obj["endTime"] = obj["endTime"] / factor
 
 
-def calc_tap_diff(beatmap, analysis=False):
-    
-    # k = np.array([0.3, 1.5, 7.5])
-    # k = np.exp(np.linspace(1.6, -2, num=9))
-    k = np.exp(np.linspace(1.7, -1.6, num=4))
 
-    hit_objects = beatmap['hitObjects']
-    curr_strain = np.zeros_like(k)
-    prev_time = 0.0
-    max_strain = np.zeros_like(k)
-    strain_history = []
-
-    for obj in hit_objects:
-        
-        curr_time = obj['startTime'] / 1000
-        curr_strain *= np.exp(-k * (curr_time - prev_time))
-
-        if analysis:
-            strain_history.append((list(curr_strain), curr_time))
-
-        max_strain = np.maximum(max_strain, curr_strain)
-        obj['tapStrain'] = curr_strain.copy()
-
-        curr_strain += k
-        prev_time = curr_time
-
-    diff = np.average(max_strain) ** 0.85 * 0.778
-
-    if analysis:
-        return strain_history
-    else:
-        return (diff,) + tuple(max_strain)
 
 
 def get_finish_position(slider):

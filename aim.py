@@ -29,18 +29,18 @@ correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
 a0f = [0.5, 1, 1.5, 2]
 k0f = interp1d(a0f, [-6,-8,-9.5,-8.2], bounds_error=False, fill_value=(-6,-8.2))
 
-coeffs0f = np.array([[[-0.5,0,5],
-                      [-0.35,0.35,0],
-                      [-0.35,-0.35,0]],
-                     [[-1,0,4],
-                      [-0.7,0.7,1],
-                      [-0.7,-0.7,1]],
-                     [[-1.5,0,2],
-                      [-1,1,2],
-                      [-1,-1,2]],
-                     [[-2,0,2],
-                      [-1.4,1.4,2],
-                      [-1.4,-1.4,2]]])
+coeffs0f = np.array([[[-0.5,0,1,5],
+                      [-0.35,0.35,1,0],
+                      [-0.35,-0.35,1,0]],
+                     [[-1,0,1,4],
+                      [-0.7,0.7,1,1],
+                      [-0.7,-0.7,1,1]],
+                     [[-1.5,0,1,2],
+                      [-1,1,1,2],
+                      [-1,-1,1,2]],
+                     [[-2,0,1,2],
+                      [-1.4,1.4,1,2],
+                      [-1.4,-1.4,1,2]]])
 
 components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False, fill_value=(coeffs0f[0], coeffs0f[-1]))
 
@@ -48,22 +48,22 @@ components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False, fill_value=(c
 a0s = [1.5, 2.5, 4, 6]
 k0s = interp1d(a0s, [-1,-5.9,-5.3,-2.4], bounds_error=False, fill_value=(-1,-2.4))
 
-coeffs0s = np.array([[[2,0,1],
-                      [1.6,2,0],
-                      [1.6,2,0],
-                      [0,0,0]],
-                     [[3,0,1],
-                      [1.8,2.4,0.3],
-                      [1.8,-2.4,0.3],
-                      [0,0,-0.3]],
-                     [[4,0,0.6],
-                      [2,4,0.24],
-                      [2,-4,0.24],
-                      [-1,0,-0.3]],
-                     [[5,0,0.4],
-                      [2.5,4,0.16],
-                      [2.5,-4,0.16],
-                      [-1.25,0,-0.32]]])
+coeffs0s = np.array([[[2,0,1,1],
+                      [1.6,2,1,0],
+                      [1.6,2,1,0],
+                      [0,0,1,0]],
+                     [[3,0,1,1],
+                      [1.8,2.4,1,0.3],
+                      [1.8,-2.4,1,0.3],
+                      [0,0,1,-0.3]],
+                     [[4,0,1,0.6],
+                      [2,4,1,0.24],
+                      [2,-4,1,0.24],
+                      [-1,0,1,-0.3]],
+                     [[5,0,1,0.4],
+                      [2.5,4,1,0.16],
+                      [2.5,-4,1,0.16],
+                      [-1.25,0,1,-0.32]]])
 
 components0s = interp1d(a0s, coeffs0s, axis=0, bounds_error=False, 
                       fill_value=(coeffs0s[0], coeffs0s[-1]))
@@ -159,44 +159,48 @@ def extract_movements(hit_objects, diameter):
 # including D, MT, end time of the movement, and the factors of correction
 def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     
-    if obj1['objectName'] == 'slider':
+    # if obj1['objectName'] == 'slider':
 
-        finish_position = get_finish_position(obj1)
+    #     finish_position = get_finish_position(obj1)
 
-        # This is only a temporary algorithm to sliders
-        # long sliders (when the slider tail matters)
-        D_long = max(calc_distance(finish_position, obj2['position']) - 1.5 * diameter, 0.0)
-        MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
+    #     # This is only a temporary algorithm to sliders
+    #     # long sliders (when the slider tail matters)
+    #     D_long = max(calc_distance(finish_position, obj2['position']) - 1.5 * diameter, 0.0)
+    #     MT_long = (obj2['startTime'] - obj1['endTime'] + 70) / 1000.0
 
-        # short sliders (when the slider head matters) (treat as a circle)
-        D_short = calc_distance(obj1['position'], obj2['position'])
-        MT_short = (obj2['startTime'] - obj1['startTime']) / 1000.0
+    #     # short sliders (when the slider head matters) (treat as a circle)
+    #     D_short = calc_distance(obj1['position'], obj2['position'])
+    #     MT_short = (obj2['startTime'] - obj1['startTime']) / 1000.0
 
-        if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
-            D = D_long
-            MT = MT_long
-        else:
-            D = D_short
-            MT = MT_short
+    #     if calc_IP(D_long, diameter, MT_long) > calc_IP(D_short, diameter, MT_short):
+    #         D = D_long
+    #         MT = MT_long
+    #     else:
+    #         D = D_short
+    #         MT = MT_short
 
-    elif obj1['objectName'] == 'circle':
+    # elif obj1['objectName'] == 'circle':
 
-        finish_position = obj1['position']
+    #     finish_position = obj1['position']
 
-        D = calc_distance(obj1['position'], obj2['position'])
-        MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
+    #     D = calc_distance(obj1['position'], obj2['position'])
+    #     MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
     
-    else: 
-        raise Exception  
+    # else: 
+    #     raise Exception  
 
+    finish_position = obj1['position']
+    D = calc_distance(obj1['position'], obj2['position'])
+    MT = (obj2['startTime'] - obj1['startTime']) / 1000.0
     
+
     IP = calc_IP(D, diameter, MT)
 
     obj1_in_the_middle = False
     obj2_in_the_middle = False
 
     s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
-    d12 = norm (s12)
+    d12 = norm(s12)
 
 
     # Correction #1 - The Previous Object
@@ -206,7 +210,6 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     if obj0 is not None:
         
         s01 = (np.array(obj1['position']) - np.array(obj0['position'])) / diameter
-        s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         
         if d12 == 0:
             correction0 = 0
@@ -233,7 +236,6 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
                     movingness = expit(d01 * 2) * 2 - 1
                     correction0 = (movingness * correction_moving + (1-movingness) * correction_still) * 0.8
 
-
             elif t_ratio < 1/1.4:
 
                 if d01 == 0:
@@ -256,17 +258,16 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
                 i = -10
                 correction0 = ((correction0_flow**i + correction0_snap**i) / 2) ** (1/i)
 
-                # print('{:8} {:6.3f} {:6.3f}'.format(obj2['startTime'], correction0_flow, correction0_snap))
+                # print('{:8} {:16.13f}'.format(obj2['startTime'], correction0))
 
+    # print('{:8} {:16.13f} {:16.13f}'.format(obj2['startTime'], d12, D))
 
-
-    # Correction - The Next Object
+    # Correction #2 - The Next Object
     # Estimate how obj3 affects the difficulty of hitting obj2
     correction3 = 0
 
     if obj3 is not None:
 
-        s12 = (np.array(obj2['position']) - np.array(finish_position)) / diameter
         s23 = (np.array(obj3['position']) - np.array(obj2['position'])) / diameter
 
         if d12 == 0:
@@ -314,6 +315,9 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
                 i = -10
                 correction3 = max(((correction3_flow**i + correction3_snap**i) / 2) ** (1/i) - 0.1, 0) * 0.5
 
+                # print('{:8} {:16.13f}'.format(obj2['startTime'], correction0))
+
+
 
     # Correction #3 - 4-object pattern
     # Estimate how the whole pattern consisting of obj0 to obj3 affects 
@@ -357,7 +361,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT01_recp = 0
             IP01 = 0
 
-        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.12
+        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.15
 
         if obj3 is not None:
             D23 = calc_distance(obj2['position'], obj3['position'])
@@ -368,13 +372,14 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT23_recp = 0
             IP23 = 0
 
-        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.12
+        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.15
 
 
     # apply the corrections above
     D_raw = D
     D_corr0 = D_raw * (1 + correction0 + correction3 + correction_pattern)
     D_corr_tap = D_corr0 * (1 + correction_tap)
+
 
     MT += correction_early + correction_late
 
@@ -388,7 +393,7 @@ def calc_correction0_flow(d, x0, y0):
     correction_raw = k0f(d)
 
     for c in components0f(d):
-        correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
+        correction_raw += c[3] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + c[2])
 
     return expit(correction_raw)
 
@@ -398,7 +403,7 @@ def calc_correction0_snap(d, x0, y0):
     correction_raw = k0s(d)
 
     for c in components0s(d):
-        correction_raw += c[2] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + 1)
+        correction_raw += c[3] * sqrt((x0-c[0])**2 + (y0-c[1])**2 + c[2])
 
     return expit(correction_raw)
 
@@ -497,8 +502,8 @@ def calc_fc_prob(TP, movements, W):
 
 
 def cs_to_diameter(cs):
-    # formula: (32.01*(1-(0.7*(cs-5)/5))) * 2
-    return 108.834 - 8.9628 * cs
+    # formula: (1-(0.7*(cs-5)/5)) * 32 * 2
+    return 108.8 - 8.96 * cs
 
 
 def calc_distance(pos1, pos2):
