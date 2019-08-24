@@ -27,7 +27,7 @@ correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
 # for the effects of the data in graphs
 # obj0 - flow
 a0f = [0.5, 1, 1.5, 2]
-k0f = interp1d(a0f, [-6,-8,-9.5,-8.2], bounds_error=False, fill_value=(-6,-8.2))
+k0f = interp1d(a0f, [-5.5,-7.5,-10,-8.2], bounds_error=False, fill_value=(-5.5,-8.2))
 
 coeffs0f = np.array([[[-0.5,0,1,5],
                       [-0.35,0.35,1,0],
@@ -375,8 +375,12 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
         correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.15
 
 
+    # Correction #6 - Small circle bonus
+    small_circle_bonus = expit((55 - diameter) / 2) * 0.1
+
+
     # apply the corrections above
-    D_raw = D
+    D_raw = D * (1 + small_circle_bonus)
     D_corr0 = D_raw * (1 + correction0 + correction3 + correction_pattern)
     D_corr_tap = D_corr0 * (1 + correction_tap)
 
