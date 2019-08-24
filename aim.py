@@ -46,7 +46,7 @@ components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False, fill_value=(c
 
 # obj0 - snap
 a0s = [1.5, 2.5, 4, 6]
-k0s = interp1d(a0s, [-1,-5.9,-5.3,-2.4], bounds_error=False, fill_value=(-1,-2.4))
+k0s = interp1d(a0s, [-1,-5.9,-5,-3.7], bounds_error=False, fill_value=(-1,-3.7))
 
 coeffs0s = np.array([[[2,0,1,1],
                       [1.6,2,1,0],
@@ -56,14 +56,14 @@ coeffs0s = np.array([[[2,0,1,1],
                       [1.8,2.4,1,0.3],
                       [1.8,-2.4,1,0.3],
                       [0,0,1,-0.3]],
-                     [[4,0,1,0.6],
+                     [[4,0,0,0.6],
                       [2,4,1,0.24],
                       [2,-4,1,0.24],
-                      [-1,0,1,-0.3]],
-                     [[5,0,1,0.4],
-                      [2.5,4,1,0.16],
-                      [2.5,-4,1,0.16],
-                      [-1.25,0,1,-0.32]]])
+                      [-1,0,1,-0.24]],
+                     [[6,0,0,0.4],
+                      [3,6,1,0.16],
+                      [3,-6,1,0.16],
+                      [-1.5,0,1,-0.16]]])
 
 components0s = interp1d(a0s, coeffs0s, axis=0, bounds_error=False, 
                       fill_value=(coeffs0s[0], coeffs0s[-1]))
@@ -86,7 +86,7 @@ components3f = interp1d(a3f, coeffs3f, axis=0, bounds_error=False,
 
 # obj3 - snap
 a3s = [1.5, 2.5, 4, 6]
-k3s = interp1d(a3s, [-1.8,-3,-5.9,-6], bounds_error=False, fill_value=(-1.8,-6))
+k3s = interp1d(a3s, [-1.8,-3,-5.4,-4.9], bounds_error=False, fill_value=(-1.8,-4.9))
 
 coeffs3s = np.array([[[-2,0,1,0.4],
                       [-1,1.4,1,0],
@@ -98,16 +98,16 @@ coeffs3s = np.array([[[-2,0,1,0.4],
                       [-1.5,-2.1,1,0.2],
                       [0,0,0,1],
                       [1.5,0,1,-0.6]],
-                     [[-4,0,1,0.4],
-                      [-2,2.8,1,0.4],
-                      [-2,-2.8,1,0.4],
-                      [0,0,0,0.4],
+                     [[-4,0,0,0.4],
+                      [-2,2,1,0.4],
+                      [-2,-2,1,0.4],
+                      [0,0,0,0.6],
                       [2,0,1,-0.4]],
-                     [[-5,0,1,0.4],
-                      [-2.5,3.5,1,0.4],
-                      [-2.5,-3.5,1,0.4],
-                      [0,0,0,0.4],
-                      [2.5,0,1,-0.4]]])
+                     [[-6,0,0,0.3],
+                      [-3,3,1,0.2],
+                      [-3,-3,1,0.2],
+                      [0,0,0,0.6],
+                      [3,0,1,-0.3]]])
 
 components3s = interp1d(a3s, coeffs3s, axis=0, bounds_error=False, 
                       fill_value=(coeffs3s[0], coeffs3s[-1]))
