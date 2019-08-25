@@ -330,7 +330,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
        gap = norm(s12 - s23/2 - s01/2)
        spacing = np.prod([((d**10 + 1) / 2) ** (1/10) for d in [d01, d12, d23]])
 
-       correction_pattern = (expit((gap-0.75)*8) - expit(-6)) * (1 - expit((spacing-3)*4)) * 0.4
+       correction_pattern = (expit((gap-0.75)*8) - expit(-6)) * (1 - expit((spacing-3)*4)) * 0.6
 
 
     # Correction #4 - Tap Strain
