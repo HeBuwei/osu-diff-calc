@@ -14,27 +14,31 @@ def calc_tap_diff(beatmap, analysis=False):
     # k = np.exp(np.linspace(1.6, -2, num=9))
     k = np.exp(np.linspace(1.7, -1.6, num=4))
 
+    diameter = cs_to_diameter(beatmap["CsAfterMods"])
     hit_objects = beatmap['hitObjects']
-    curr_strain = np.zeros_like(k)
-    prev_time = 0.0
-    max_strain = np.zeros_like(k)
-    strain_history = []
+    curr_strain = k * 1
+    prev_time = hit_objects[0]['startTime'] / 1000
+    max_strain = k * 1
+    strain_history = [(list(curr_strain), prev_time)]
 
-    for obj in hit_objects:
+    for obj0, obj1 in zip(hit_objects, hit_objects[1:]):
         
-        curr_time = obj['startTime'] / 1000
+        curr_time = obj1['startTime'] / 1000
         curr_strain *= np.exp(-k * (curr_time - prev_time))
 
         if analysis:
             strain_history.append((list(curr_strain), curr_time))
 
         max_strain = np.maximum(max_strain, curr_strain)
-        obj['tapStrain'] = curr_strain.copy()
+        obj1['tapStrain'] = curr_strain.copy()
 
-        curr_strain += k
+        d = calc_distance(obj0['position'], obj1['position'])
+        spaced_buff = calc_spacedness(d / diameter) * 0.07
+
+        curr_strain += k * (1 + spaced_buff)
         prev_time = curr_time
 
-    diff = np.average(max_strain) ** 0.85 * 0.778
+    diff = np.average(max_strain) ** 0.85 * 0.758
 
     if analysis:
         return strain_history
@@ -80,6 +84,10 @@ def calc_mash_nerf_factors(mash_levels, d_relative):
     
     complete_mash_factors = 0.5 + 0.5 * expit(d_relative * 7 - 6)
     return mash_levels * complete_mash_factors + (1 - mash_levels) * 1
+
+
+def calc_spacedness(d_relative):
+	return expit((d_relative - 0.4) * 10) - expit(-4)
 
 
 
