@@ -27,7 +27,7 @@ correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
 # for the effects of the data in graphs
 # obj0 - flow
 a0f = [0.5, 1, 1.5, 2]
-k0f = interp1d(a0f, [-9.8,-7.1,-7,-4.4], bounds_error=False, fill_value=(-9.5,-4.4))
+k0f = interp1d(a0f, [-9.8,-7.1,-7,-4.4], bounds_error=False, fill_value=(-9.5,-4.4), assume_sorted=True)
 
 coeffs0f = np.array([[[-0.5,0,1,4],
                       [-0.25,0.5,1,2],
@@ -42,11 +42,12 @@ coeffs0f = np.array([[[-0.5,0,1,4],
                       [-1,2,1,1],
                       [-1,-2,1,1]]])
 
-components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False, fill_value=(coeffs0f[0], coeffs0f[-1]))
+components0f = interp1d(a0f, coeffs0f, axis=0, bounds_error=False,
+                        fill_value=(coeffs0f[0], coeffs0f[-1]), assume_sorted=True)
 
 # obj0 - snap
 a0s = [1.5, 2.5, 4, 6]
-k0s = interp1d(a0s, [-1,-5.9,-5,-3.7], bounds_error=False, fill_value=(-1,-3.7))
+k0s = interp1d(a0s, [-1,-5.9,-5,-3.7], bounds_error=False, fill_value=(-1,-3.7), assume_sorted=True)
 
 coeffs0s = np.array([[[2,0,1,1],
                       [1.6,2,1,0],
@@ -66,11 +67,11 @@ coeffs0s = np.array([[[2,0,1,1],
                       [-1.5,0,1,-0.16]]])
 
 components0s = interp1d(a0s, coeffs0s, axis=0, bounds_error=False, 
-                      fill_value=(coeffs0s[0], coeffs0s[-1]))
+                      fill_value=(coeffs0s[0], coeffs0s[-1]), assume_sorted=True)
 
 # obj3 - flow
 a3f = [0, 1, 2, 3]
-k3f = interp1d(a3f, [-4,-4,-4.5,-2.5], bounds_error=False, fill_value=(-4,-2.5))
+k3f = interp1d(a3f, [-4,-4,-4.5,-2.5], bounds_error=False, fill_value=(-4,-2.5), assume_sorted=True)
 
 coeffs3f = np.array([[[0,0,0,1.5],
                       [0,0,0,2]],
@@ -82,11 +83,11 @@ coeffs3f = np.array([[[0,0,0,1.5],
                       [0,0,0,3.5]]])
 
 components3f = interp1d(a3f, coeffs3f, axis=0, bounds_error=False, 
-                      fill_value=(coeffs3f[0], coeffs3f[-1]))
+                      fill_value=(coeffs3f[0], coeffs3f[-1]), assume_sorted=True)
 
 # obj3 - snap
 a3s = [1.5, 2.5, 4, 6]
-k3s = interp1d(a3s, [-1.8,-3,-5.4,-4.9], bounds_error=False, fill_value=(-1.8,-4.9))
+k3s = interp1d(a3s, [-1.8,-3,-5.4,-4.9], bounds_error=False, fill_value=(-1.8,-4.9), assume_sorted=True)
 
 coeffs3s = np.array([[[-2,0,1,0.4],
                       [-1,1.4,1,0],
@@ -110,7 +111,7 @@ coeffs3s = np.array([[[-2,0,1,0.4],
                       [3,0,1,-0.3]]])
 
 components3s = interp1d(a3s, coeffs3s, axis=0, bounds_error=False, 
-                      fill_value=(coeffs3s[0], coeffs3s[-1]))
+                      fill_value=(coeffs3s[0], coeffs3s[-1]), assume_sorted=True)
 
 
 Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
