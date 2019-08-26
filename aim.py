@@ -27,7 +27,7 @@ correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
 # for the effects of the data in graphs
 # obj0 - flow
 a0f = [0.5, 1, 1.5, 2]
-k0f = interp1d(a0f, [-9.8,-7.1,-7,-4.4], bounds_error=False, fill_value=(-9.5,-4.4), assume_sorted=True)
+k0f = interp1d(a0f, [-9.8,-7.1,-7,-4.4], bounds_error=False, fill_value=(-9.8,-4.4), assume_sorted=True)
 
 coeffs0f = np.array([[[-0.5,0,1,4],
                       [-0.25,0.5,1,2],
