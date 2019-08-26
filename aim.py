@@ -114,7 +114,7 @@ components3s = interp1d(a3s, coeffs3s, axis=0, bounds_error=False,
                       fill_value=(coeffs3s[0], coeffs3s[-1]), assume_sorted=True)
 
 
-Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain'])
+Movement = namedtuple('Movement', ['D', 'MT', 'time', 'D_raw', 'D_corr0', 'aim_strain', 'cheesable_ratio'])
 
 
 
@@ -362,7 +362,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT01_recp = 0
             IP01 = 0
 
-        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp)) * 0.15
+        correction_early = expit((IP01 / IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT01_recp))
 
         if obj3 is not None:
             D23 = calc_distance(obj2['position'], obj3['position'])
@@ -373,7 +373,7 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
             MT23_recp = 0
             IP23 = 0
 
-        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp)) * 0.15
+        correction_late = expit((IP23/IP - 0.6) * (-15)) * (1 / (1/(MT+0.07) + MT23_recp))
 
 
     # Correction #6 - Small circle bonus
@@ -385,10 +385,9 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
     D_corr0 = D_raw * (1 + correction0 + correction3 + correction_pattern)
     D_corr_tap = D_corr0 * (1 + correction_tap)
 
+    cheesable_ratio = (correction_early + correction_late) / MT
 
-    MT += correction_early + correction_late
-
-    return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0)
+    return Movement(D_corr_tap, MT, obj2['startTime'] / 1000, D_raw, D_corr0, 0, cheesable_ratio)
 
 
 # Refer to https://www.wolframcloud.com/obj/hebuweitom/Published/Correction.nb
@@ -493,12 +492,12 @@ def calc_fc_prob_minus_threshold(TP, movements, W):
     return calc_fc_prob(TP, movements, W) - P_THRESHOLD
     
 
-def calc_fc_prob(TP, movements, W):
+def calc_fc_prob(TP, movements, W, cheese_lvl=0.15):
     fc_prob = 1.0
 
     for mvmt in movements:
-        D = mvmt[0]
-        MT = mvmt[1]
+        D = mvmt.D
+        MT = mvmt.MT * (1 + cheese_lvl * mvmt.cheesable_ratio)
         hit_prob = calc_hit_prob(D, W, MT, TP)
         fc_prob *= hit_prob
 
