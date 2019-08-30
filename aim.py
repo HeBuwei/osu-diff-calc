@@ -26,12 +26,12 @@ correction0_moving_spline = CubicHermiteSpline(np.array([-1,-0.6,0.3,0.5,1]),
 # Refer to https://www.wolframcloud.com/obj/hebuweitom/Published/Correction.nb
 # for the effects of the data in graphs
 # obj0 - flow
-a0f = [0.5, 1, 1.5, 2]
-k0f = interp1d(a0f, [-9.8,-7.1,-7,-4.4], bounds_error=False, fill_value=(-9.8,-4.4), assume_sorted=True)
+a0f = [0, 1, 1.5, 2]
+k0f = interp1d(a0f, [-14,-7.7,-7,-4.4], bounds_error=False, fill_value=(-14,-4.4), assume_sorted=True)
 
-coeffs0f = np.array([[[-0.5,0,1,4],
-                      [-0.25,0.5,1,2],
-                      [-0.25,-0.5,1,2]],
+coeffs0f = np.array([[[0,0,1,6],
+                      [0,0,1,3],
+                      [0,0,1,3]],
                      [[-1,0,1,2.5],
                       [-0.5,1,1,1.2],
                       [-0.5,-1,1,1.2]],
@@ -328,10 +328,10 @@ def extract_movement(diameter, obj1, obj2, obj0=None, obj3=None):
 
     if obj1_in_the_middle and obj2_in_the_middle:
 
-       gap = norm(s12 - s23/2 - s01/2)
+       gap = norm(s12 - s23/2 - s01/2) / (norm(s12) + 0.1)
        spacing = np.prod([((d**10 + 1) / 2) ** (1/10) for d in [d01, d12, d23]])
 
-       correction_pattern = (expit((gap-0.75)*8) - expit(-6)) * (1 - expit((spacing-3)*4)) * 0.6
+       # correction_pattern = (expit((gap-0.75)*8) - expit(-6)) * (1 - expit((spacing-3)*4)) * 0.6
 
 
     # Correction #4 - Tap Strain
